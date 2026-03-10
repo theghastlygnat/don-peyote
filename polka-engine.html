@@ -30,16 +30,23 @@
             border: 1px solid rgba(255,255,255,0.15);
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        #game-overlay {
-            display: none;
+        #game-overlay, #intro-overlay {
             position: absolute;
             inset: 0;
             background: rgba(0,0,0,0.85);
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
             z-index: 100;
+        }
+        #intro-overlay {
+            background: black;
+            z-index: 200;
+        }
+        #game-overlay {
+            display: none;
         }
         #boss-ui {
             display: none;
@@ -63,11 +70,30 @@
             width: 100%;
             transition: width 0.3s ease;
         }
+        video {
+            max-width: 90%;
+            max-height: 80%;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center h-screen">
 
     <div id="game-container" class="relative">
+        <!-- Intro Video Overlay -->
+        <div id="intro-overlay">
+            <video id="intro-video" preload="auto">
+                <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/logo-melting.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="mt-6 flex gap-4">
+                <button id="start-btn" onclick="startIntro()" class="px-8 py-3 bg-cyan-500 text-white font-black rounded-full hover:bg-cyan-400 uppercase tracking-widest shadow-lg transition-all">Play Intro</button>
+                <button id="skip-btn" onclick="closeIntro()" class="px-8 py-3 bg-white/10 text-white font-black rounded-full hover:bg-white/20 uppercase tracking-widest border border-white/20 transition-all">Skip</button>
+            </div>
+            <p class="mt-4 text-[10px] opacity-50 uppercase tracking-widest">Replace video URL in code for custom intro</p>
+        </div>
+
         <canvas id="gameCanvas"></canvas>
         
         <div id="boss-ui">
@@ -111,12 +137,31 @@
         const levelDisplay = document.getElementById('level-display');
         const palette = document.getElementById('palette');
         const overlay = document.getElementById('game-overlay');
+        const introOverlay = document.getElementById('intro-overlay');
+        const introVideo = document.getElementById('intro-video');
         const overlayTitle = document.getElementById('overlay-title');
         const overlaySub = document.getElementById('overlay-sub');
         const overlayBtn = document.getElementById('overlay-btn');
         const musicBtn = document.getElementById('music-btn');
         const bossUI = document.getElementById('boss-ui');
         const hpFill = document.getElementById('hp-fill');
+
+        // --- INTRO LOGIC ---
+        function startIntro() {
+            document.getElementById('start-btn').style.display = 'none';
+            introVideo.play();
+            introVideo.onended = () => {
+                closeIntro();
+            };
+        }
+
+        function closeIntro() {
+            introVideo.pause();
+            introOverlay.style.display = 'none';
+            gameActive = true;
+            // Start music automatically if user interacted
+            if (!isMusicPlaying) toggleMusic();
+        }
 
         // --- AUDIO ENGINE ---
         let audioCtx = null;
@@ -210,7 +255,7 @@
         let isEditMode = false;
         let selectedTileType = 1;
         let cameraX = 0;
-        let gameActive = true;
+        let gameActive = false; // Start false for intro
         const keys = {};
 
         const player = {
@@ -309,7 +354,7 @@
         }
 
         function shoot() {
-            if (player.shootCooldown > 0) return;
+            if (!gameActive || player.shootCooldown > 0) return;
             const dir = player.facingRight ? 1 : -1;
             projectiles.push({
                 x: player.x + (player.facingRight ? player.width : -10),
@@ -341,7 +386,6 @@
 
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
-            // Changed key logic to check for 'Enter' instead of 'Shift'
             if (e.code === 'KeyF' || e.code === 'Enter') {
                 shoot();
             }
@@ -394,15 +438,12 @@
                 if (!p.active) return;
                 p.x += p.vx;
                 
-                // Off-screen check
                 if (p.x < cameraX || p.x > cameraX + canvas.width) p.active = false;
                 
-                // Wall collision
                 const tx = Math.floor(p.x / TILE_SIZE);
                 const ty = Math.floor(p.y / TILE_SIZE);
                 if (world[ty] && world[ty][tx] > 0 && world[ty][tx] !== 4) p.active = false;
 
-                // Hit enemy
                 enemies.forEach(en => {
                     if (!en.dead && checkOverlap(p, en)) {
                         en.dead = true;
@@ -411,7 +452,6 @@
                     }
                 });
 
-                // Hit boss
                 if (boss && boss.invuln === 0 && checkOverlap(p, boss)) {
                     boss.hp--;
                     boss.invuln = 15;
@@ -423,7 +463,6 @@
             });
             projectiles = projectiles.filter(p => p.active);
 
-            // Enemy & Boss logic
             enemies.forEach(en => {
                 if (en.dead) return;
                 en.x += en.vx;
@@ -444,11 +483,9 @@
                 boss.vy += 0.2;
                 boss.y += boss.vy;
 
-                // Simple Boss AI
                 if (boss.x > player.x + 50) boss.vx = -2.5;
                 else if (boss.x < player.x - 50) boss.vx = 2.5;
 
-                // Boss floor collision
                 if (boss.y + boss.height > (ROWS - 1) * TILE_SIZE) {
                     boss.y = (ROWS - 1) * TILE_SIZE - boss.height;
                     boss.vy = -Math.random() * 5; 
@@ -465,7 +502,6 @@
                 }
             }
 
-            // Camera
             let targetCam = player.x - canvas.width / 2;
             cameraX += (targetCam - cameraX) * 0.1;
             cameraX = Math.max(0, Math.min(cameraX, COLS * TILE_SIZE - canvas.width));
@@ -527,7 +563,6 @@
             ctx.save();
             ctx.translate(-Math.floor(cameraX), 0);
 
-            // Tiles
             for (let r = 0; r < ROWS; r++) {
                 for (let c = Math.floor(cameraX/TILE_SIZE); c < Math.floor((cameraX+canvas.width)/TILE_SIZE)+1; c++) {
                     if (c >= COLS) break;
@@ -544,11 +579,9 @@
 
             enemies.forEach(en => { if (!en.dead) safeDrawImage(images.enemy, en.x, en.y, en.width, en.height); });
 
-            // Draw Projectiles
             ctx.fillStyle = '#FFFF00';
             projectiles.forEach(p => {
                 ctx.fillRect(p.x, p.y, p.width, p.height);
-                // Glow effect
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = "yellow";
                 ctx.fillRect(p.x, p.y, p.width, p.height);
@@ -561,7 +594,6 @@
                 }
             }
 
-            // Player with flip
             if (!player.facingRight) {
                 ctx.save(); ctx.translate(player.x + player.width, player.y); ctx.scale(-1, 1);
                 safeDrawImage(images.player, 0, 0, player.width, player.height); ctx.restore();
