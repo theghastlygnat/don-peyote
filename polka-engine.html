@@ -50,15 +50,17 @@
         
         <div id="game-overlay">
             <h1 id="overlay-title" class="text-6xl font-black mb-8 tracking-tighter italic">GAME OVER</h1>
-            <button onclick="resetGame()" class="px-10 py-4 bg-white text-black font-black rounded-full hover:bg-yellow-400 transition-all active:scale-90 uppercase tracking-widest shadow-lg">Try Again</button>
+            <div id="overlay-sub" class="text-xl mb-8 opacity-80 font-bold uppercase tracking-widest"></div>
+            <button id="overlay-btn" onclick="resetGame()" class="px-10 py-4 bg-white text-black font-black rounded-full hover:bg-yellow-400 transition-all active:scale-90 uppercase tracking-widest shadow-lg">Try Again</button>
         </div>
 
         <div class="absolute top-4 left-4 ui-panel flex flex-col gap-1">
             <div class="text-xl font-black italic uppercase text-yellow-400">Sprite Engine</div>
-            <div class="text-xs font-bold opacity-80 uppercase tracking-wider">Arrows / WASD: Move</div>
-            <div class="text-xs font-bold opacity-80 uppercase tracking-wider">Space / W: Jump</div>
+            <div id="level-display" class="text-sm font-bold text-white uppercase tracking-widest mb-1">Level 1: Green Hills</div>
             <div class="h-px bg-white/20 my-1"></div>
-            <div class="text-xs font-bold opacity-80 italic text-cyan-300">Tip: Change Image URLs in code</div>
+            <div class="text-[10px] font-bold opacity-60 uppercase tracking-wider">Arrows / WASD: Move</div>
+            <div class="text-[10px] font-bold opacity-60 uppercase tracking-wider">Space / W: Jump</div>
+            <div class="text-[10px] font-bold opacity-60 italic text-cyan-300 mt-1">Press 'E' for Level Editor</div>
             <div id="mode-indicator" class="text-cyan-400 font-black text-sm mt-1 uppercase tracking-tighter">Play Mode</div>
         </div>
 
@@ -78,15 +80,17 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const modeIndicator = document.getElementById('mode-indicator');
+        const levelDisplay = document.getElementById('level-display');
         const palette = document.getElementById('palette');
         const overlay = document.getElementById('game-overlay');
         const overlayTitle = document.getElementById('overlay-title');
+        const overlaySub = document.getElementById('overlay-sub');
+        const overlayBtn = document.getElementById('overlay-btn');
 
         // --- SPRITE CONFIGURATION ---
-        // Replace these URLs with your own hosted images!
         const SPRITES = {
-            player: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/25.png', // Pikachu!
-            enemy: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/129.png',  // Magikarp!
+            player: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/25.png', 
+            enemy: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/129.png',  
             brick: 'https://raw.githubusercontent.com/Aris-F/Pixel-Art-Assets/main/Tiles/Brick.png',
             grass: 'https://raw.githubusercontent.com/Aris-F/Pixel-Art-Assets/main/Tiles/Grass.png',
             coin: 'https://raw.githubusercontent.com/Aris-F/Pixel-Art-Assets/main/Items/Coin.png'
@@ -94,14 +98,12 @@
 
         const images = {};
         let imagesLoaded = 0;
-        const totalImages = Object.keys(SPRITES).length;
 
         function loadImages() {
             for (let key in SPRITES) {
                 const img = new Image();
                 img.src = SPRITES[key];
                 img.onload = () => { imagesLoaded++; };
-                img.onerror = () => { console.warn(`Failed to load sprite: ${key}`); };
                 images[key] = img;
             }
         }
@@ -119,6 +121,7 @@
         canvas.width = 800;
         canvas.height = 480;
 
+        let currentLevelIndex = 0;
         let isEditMode = false;
         let selectedTileType = 1;
         let cameraX = 0;
@@ -126,15 +129,8 @@
         const keys = {};
 
         const player = {
-            x: 100,
-            y: 300,
-            width: 32,
-            height: 32,
-            vx: 0,
-            vy: 0,
-            onGround: false,
-            coyoteTime: 0,
-            facingRight: true
+            x: 100, y: 300, width: 32, height: 32, vx: 0, vy: 0,
+            onGround: false, coyoteTime: 0, facingRight: true
         };
 
         let enemies = [];
@@ -142,24 +138,83 @@
         const ROWS = canvas.height / TILE_SIZE;
         const COLS = 150; 
 
+        const LEVELS = [
+            {
+                name: "Level 1: Green Hills",
+                bgColor: "#87CEEB",
+                setup: (w) => {
+                    for(let c=0; c<COLS; c++) {
+                        w[ROWS-1][c] = 2; // Floor
+                        if (c > 20 && c % 15 === 0) {
+                            w[ROWS-4][c] = 3;
+                            spawnEnemy(c * TILE_SIZE, (ROWS - 2) * TILE_SIZE);
+                        }
+                    }
+                    w[ROWS-2][140] = 4; // Goal
+                }
+            },
+            {
+                name: "Level 2: Floating Islands",
+                bgColor: "#4A90E2",
+                setup: (w) => {
+                    for(let c=0; c<COLS; c++) {
+                        // Sparse platforms
+                        if (c % 8 < 4) w[ROWS-1][c] = 1;
+                        if (c % 12 === 0 && c > 10) {
+                            w[ROWS-4][c] = 1;
+                            w[ROWS-4][c+1] = 1;
+                            spawnEnemy((c+1) * TILE_SIZE, (ROWS - 5) * TILE_SIZE);
+                        }
+                        if (c % 15 === 5) w[ROWS-6][c] = 3;
+                    }
+                    w[ROWS-2][140] = 4;
+                }
+            },
+            {
+                name: "Level 3: The Great Corridor",
+                bgColor: "#2C3E50",
+                setup: (w) => {
+                    for(let c=0; c<COLS; c++) {
+                        w[ROWS-1][c] = 1;
+                        w[0][c] = 1; // Ceiling
+                        if (c % 10 === 0 && c > 5) {
+                            for(let r=1; r<ROWS-4; r++) w[r][c] = 1;
+                            spawnEnemy(c * TILE_SIZE + 80, (ROWS - 2) * TILE_SIZE);
+                        }
+                    }
+                    w[ROWS-2][140] = 4;
+                }
+            }
+        ];
+
         function initWorld() {
             enemies = [];
             for (let r = 0; r < ROWS; r++) {
                 world[r] = [];
-                for (let c = 0; c < COLS; c++) {
-                    if (r === ROWS - 1) world[r][c] = 1; 
-                    else if (r === ROWS - 4 && c > 15 && c % 15 === 0) {
-                        world[r][c] = 3;
-                        spawnEnemy(c * TILE_SIZE, (r - 1) * TILE_SIZE);
-                    }
-                    else if (c === 140 && r === ROWS - 2) world[r][c] = 4;
-                    else world[r][c] = 0;
-                }
+                for (let c = 0; c < COLS; c++) world[r][c] = 0;
             }
+            LEVELS[currentLevelIndex].setup(world);
+            canvas.style.background = LEVELS[currentLevelIndex].bgColor;
+            levelDisplay.innerText = LEVELS[currentLevelIndex].name;
         }
 
         function spawnEnemy(x, y) {
             enemies.push({ x, y, width: 32, height: 32, vx: -2.5, dead: false });
+        }
+
+        function nextLevel() {
+            currentLevelIndex++;
+            if (currentLevelIndex >= LEVELS.length) {
+                gameActive = false;
+                overlayTitle.innerText = "GRAND VICTORY!";
+                overlayTitle.className = "text-6xl font-black mb-4 tracking-tighter italic text-yellow-400";
+                overlaySub.innerText = "You've conquered all levels!";
+                overlayBtn.innerText = "Replay All";
+                overlay.style.display = 'flex';
+                currentLevelIndex = 0;
+            } else {
+                resetGame();
+            }
         }
 
         window.addEventListener('keydown', e => keys[e.code] = true);
@@ -204,6 +259,8 @@
             cameraX = 0;
             gameActive = true;
             overlay.style.display = 'none';
+            overlaySub.innerText = "";
+            overlayBtn.innerText = "Try Again";
             initWorld();
         }
 
@@ -219,19 +276,11 @@
             const moveLeft = keys['ArrowLeft'] || keys['KeyA'];
             const moveRight = keys['ArrowRight'] || keys['KeyD'];
 
-            if (moveLeft) {
-                player.vx -= ACCEL;
-                player.facingRight = false;
-            } else if (moveRight) {
-                player.vx += ACCEL;
-                player.facingRight = true;
-            } else {
-                player.vx *= (player.onGround ? FRICTION : AIR_RES);
-            }
+            if (moveLeft) { player.vx -= ACCEL; player.facingRight = false; }
+            else if (moveRight) { player.vx += ACCEL; player.facingRight = true; }
+            else { player.vx *= (player.onGround ? FRICTION : AIR_RES); }
 
             player.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.vx));
-            if (Math.abs(player.vx) < 0.1) player.vx = 0;
-
             player.vy += GRAVITY;
 
             player.x += player.vx;
@@ -266,6 +315,7 @@
                         gameActive = false;
                         overlay.style.display = 'flex';
                         overlayTitle.innerText = "GAME OVER";
+                        overlayTitle.className = "text-6xl font-black mb-8 tracking-tighter italic text-red-500";
                     }
                 }
             });
@@ -277,6 +327,7 @@
             if (player.y > canvas.height) {
                 gameActive = false;
                 overlay.style.display = 'flex';
+                overlayTitle.innerText = "GAME OVER";
             }
         }
 
@@ -292,10 +343,7 @@
                     const tile = world[r][c];
                     if (tile > 0) {
                         if (tile === 4) {
-                            gameActive = false;
-                            overlayTitle.innerText = "VICTORY!";
-                            overlayTitle.className = "text-6xl font-black mb-8 tracking-tighter italic text-green-400";
-                            overlay.style.display = 'flex';
+                            nextLevel();
                             return;
                         }
                         if (isX) {
@@ -320,18 +368,11 @@
         function drawSprite(img, x, y, w, h, flip = false) {
             if (img && img.complete && img.naturalWidth !== 0) {
                 if (flip) {
-                    ctx.save();
-                    ctx.translate(x + w, y);
-                    ctx.scale(-1, 1);
-                    ctx.drawImage(img, 0, 0, w, h);
-                    ctx.restore();
-                } else {
-                    ctx.drawImage(img, x, y, w, h);
-                }
+                    ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1);
+                    ctx.drawImage(img, 0, 0, w, h); ctx.restore();
+                } else ctx.drawImage(img, x, y, w, h);
             } else {
-                // Fallback to colors if image fails
-                ctx.fillStyle = ctx.fillStyle || 'red';
-                ctx.fillRect(x, y, w, h);
+                ctx.fillStyle = 'red'; ctx.fillRect(x, y, w, h);
             }
         }
 
@@ -348,7 +389,6 @@
                     if (c >= COLS) break;
                     const tile = world[r][c];
                     if (tile === 0) continue;
-                    
                     const tx = c * TILE_SIZE;
                     const ty = r * TILE_SIZE;
 
@@ -356,17 +396,14 @@
                     else if (tile === 2) drawSprite(images.grass, tx, ty, TILE_SIZE, TILE_SIZE);
                     else if (tile === 3) drawSprite(images.coin, tx, ty, TILE_SIZE, TILE_SIZE);
                     else if (tile === 4) {
-                        ctx.fillStyle = '#37474F';
-                        ctx.fillRect(tx + 18, ty, 4, TILE_SIZE);
-                        ctx.fillStyle = '#D32F2F';
-                        ctx.fillRect(tx + 22, ty + 4, 15, 12);
+                        ctx.fillStyle = '#37474F'; ctx.fillRect(tx + 18, ty, 4, TILE_SIZE);
+                        ctx.fillStyle = '#D32F2F'; ctx.fillRect(tx + 22, ty + 4, 15, 12);
                     }
                 }
             }
 
             enemies.forEach(en => {
-                if (en.dead) return;
-                drawSprite(images.enemy, en.x, en.y, en.width, en.height, en.vx > 0);
+                if (!en.dead) drawSprite(images.enemy, en.x, en.y, en.width, en.height, en.vx > 0);
             });
 
             drawSprite(images.player, player.x, player.y, player.width, player.height, !player.facingRight);
