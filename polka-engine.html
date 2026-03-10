@@ -87,6 +87,7 @@
             <div class="h-px bg-white/20 my-1"></div>
             <div class="text-[10px] font-bold opacity-60 uppercase tracking-wider">Arrows / WASD: Move</div>
             <div class="text-[10px] font-bold opacity-60 uppercase tracking-wider">Space / W: Jump</div>
+            <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">F / Shift: Shoot</div>
             <div id="mode-indicator" class="text-cyan-400 font-black text-sm mt-1 uppercase tracking-tighter">Play Mode</div>
             <button onclick="toggleMusic()" id="music-btn" class="mt-2 text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded border border-white/20 uppercase font-bold tracking-widest">Toggle Music: OFF</button>
         </div>
@@ -214,10 +215,12 @@
 
         const player = {
             x: 100, y: 300, width: 32, height: 32, vx: 0, vy: 0,
-            onGround: false, coyoteTime: 0, facingRight: true
+            onGround: false, coyoteTime: 0, facingRight: true,
+            shootCooldown: 0
         };
 
         let enemies = [];
+        let projectiles = [];
         let boss = null;
         const world = [];
         const ROWS = canvas.height / TILE_SIZE;
@@ -275,7 +278,7 @@
                     for(let c=0; c<30; c++) w[ROWS-1][c] = 1; // Arena
                     boss = { 
                         x: 600, y: 100, width: 120, height: 120, 
-                        vx: -2, vy: 0, hp: 5, maxHp: 5, invuln: 0 
+                        vx: -2, vy: 0, hp: 10, maxHp: 10, invuln: 0 
                     };
                 }
             }
@@ -283,6 +286,7 @@
 
         function initWorld() {
             enemies = [];
+            projectiles = [];
             boss = null;
             bossUI.style.display = 'none';
             for (let r = 0; r < ROWS; r++) {
@@ -293,12 +297,30 @@
                 LEVELS[currentLevelIndex].setup(world);
                 canvas.style.background = LEVELS[currentLevelIndex].bgColor;
                 levelDisplay.innerText = LEVELS[currentLevelIndex].name;
-                if (LEVELS[currentLevelIndex].isBoss) bossUI.style.display = 'block';
+                if (LEVELS[currentLevelIndex].isBoss) {
+                    bossUI.style.display = 'block';
+                    hpFill.style.width = '100%';
+                }
             }
         }
 
         function spawnEnemy(x, y) {
             enemies.push({ x, y, width: 32, height: 32, vx: -2.5, dead: false });
+        }
+
+        function shoot() {
+            if (player.shootCooldown > 0) return;
+            const dir = player.facingRight ? 1 : -1;
+            projectiles.push({
+                x: player.x + (player.facingRight ? player.width : -10),
+                y: player.y + player.height / 2 - 4,
+                vx: dir * 10,
+                width: 12,
+                height: 8,
+                active: true
+            });
+            player.shootCooldown = 20;
+            playNote(880, audioCtx?.currentTime || 0, 0.05, 'triangle', 0.05);
         }
 
         function nextLevel() {
@@ -317,12 +339,18 @@
             currentLevelIndex = 0;
         }
 
-        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'KeyF' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                shoot();
+            }
+        });
         window.addEventListener('keyup', e => keys[e.code] = false);
 
         function resetGame() {
             player.x = 100; player.y = 300;
             player.vx = 0; player.vy = 0;
+            player.shootCooldown = 0;
             cameraX = 0;
             gameActive = true;
             overlay.style.display = 'none';
@@ -357,6 +385,42 @@
                 player.coyoteTime = 0;
                 player.onGround = false;
             }
+
+            if (player.shootCooldown > 0) player.shootCooldown--;
+
+            // Projectile logic
+            projectiles.forEach(p => {
+                if (!p.active) return;
+                p.x += p.vx;
+                
+                // Off-screen check
+                if (p.x < cameraX || p.x > cameraX + canvas.width) p.active = false;
+                
+                // Wall collision
+                const tx = Math.floor(p.x / TILE_SIZE);
+                const ty = Math.floor(p.y / TILE_SIZE);
+                if (world[ty] && world[ty][tx] > 0 && world[ty][tx] !== 4) p.active = false;
+
+                // Hit enemy
+                enemies.forEach(en => {
+                    if (!en.dead && checkOverlap(p, en)) {
+                        en.dead = true;
+                        p.active = false;
+                        playNote(110, audioCtx?.currentTime || 0, 0.1, 'sawtooth', 0.1);
+                    }
+                });
+
+                // Hit boss
+                if (boss && boss.invuln === 0 && checkOverlap(p, boss)) {
+                    boss.hp--;
+                    boss.invuln = 15;
+                    p.active = false;
+                    hpFill.style.width = (boss.hp / boss.maxHp * 100) + '%';
+                    if (boss.hp <= 0) victory();
+                    playNote(220, audioCtx?.currentTime || 0, 0.05, 'square', 0.1);
+                }
+            });
+            projectiles = projectiles.filter(p => p.active);
 
             // Enemy & Boss logic
             enemies.forEach(en => {
@@ -451,9 +515,8 @@
             if (img && img.complete && img.naturalWidth !== 0) {
                 ctx.drawImage(img, ...args);
             } else {
-                // Fallback: draw a colored rectangle if the image isn't ready or failed
                 const [x, y, w, h] = args.length === 4 ? args : [args[0], args[1], TILE_SIZE, TILE_SIZE];
-                ctx.fillStyle = '#ff00ff'; // Magenta for missing assets
+                ctx.fillStyle = '#ff00ff';
                 ctx.fillRect(x, y, w || TILE_SIZE, h || TILE_SIZE);
             }
         }
@@ -479,6 +542,17 @@
             }
 
             enemies.forEach(en => { if (!en.dead) safeDrawImage(images.enemy, en.x, en.y, en.width, en.height); });
+
+            // Draw Projectiles
+            ctx.fillStyle = '#FFFF00';
+            projectiles.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+                // Glow effect
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "yellow";
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+                ctx.shadowBlur = 0;
+            });
 
             if (boss) {
                 if (boss.invuln % 10 < 5) {
