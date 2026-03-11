@@ -159,7 +159,7 @@
         let player, enemies = [], platforms = [], projectiles = [], boss = null;
         let keys = {};
         let gameActive = false;
-        let worldWidth = 500;
+        let worldWidth = 1000;
         
         const textureLoader = new THREE.TextureLoader();
         const SPRITES = {
@@ -171,8 +171,8 @@
         };
 
         const PLAYER_SPEED = 0.15;
-        const JUMP_FORCE = 0.28;
-        const GRAVITY = -0.012;
+        const JUMP_FORCE = 0.32;
+        const GRAVITY = -0.015;
 
         // --- INITIALIZATION ---
         function init() {
@@ -215,7 +215,7 @@
             const material = new THREE.SpriteMaterial({ map: texture });
             player = new THREE.Sprite(material);
             player.scale.set(1.5, 1.5, 1);
-            player.position.set(0, 5, 0); // Start safely above ground
+            player.position.set(0, 6, 0); // Start high
             player.userData = { vy: 0, onGround: false, radius: 0.6 };
             scene.add(player);
         }
@@ -224,13 +224,14 @@
             // Main Floor
             const grassTex = textureLoader.load(SPRITES.grass);
             grassTex.wrapS = THREE.RepeatWrapping;
+            grassTex.wrapT = THREE.RepeatWrapping;
             grassTex.repeat.set(worldWidth / 2, 1);
             grassTex.magFilter = THREE.NearestFilter;
             
             const groundGeo = new THREE.PlaneGeometry(worldWidth, 2);
             const groundMat = new THREE.MeshBasicMaterial({ map: grassTex, transparent: true });
             const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.position.y = 1; // Floor top is at y=2
+            ground.position.set(0, 1, 0); // Center at y=1 means top is at y=2
             scene.add(ground);
             platforms.push(ground);
 
@@ -238,14 +239,14 @@
             const brickTex = textureLoader.load(SPRITES.brick);
             brickTex.magFilter = THREE.NearestFilter;
             
-            for(let i=0; i < 60; i++) {
+            for(let i=0; i < 80; i++) {
                 const x = (Math.random() * worldWidth) - (worldWidth/2);
-                if (Math.abs(x) < 5) continue; // Keep starting area clear
+                if (Math.abs(x) < 5) continue; 
                 
                 const y = Math.random() * 8 + 4;
-                const width = 2.5;
+                const width = 3;
                 
-                const platGeo = new THREE.PlaneGeometry(width, 0.8);
+                const platGeo = new THREE.PlaneGeometry(width, 1);
                 const platMat = new THREE.MeshBasicMaterial({ map: brickTex, transparent: true });
                 const plat = new THREE.Mesh(platGeo, platMat);
                 plat.position.set(x, y, 0);
@@ -276,13 +277,11 @@
             const bullet = new THREE.Sprite(mat);
             bullet.position.copy(player.position);
             bullet.scale.set(0.6, 0.6, 1);
-            // Direction based on sprite scale flip
             bullet.userData = { vx: player.scale.x > 0 ? 0.4 : -0.4 }; 
             scene.add(bullet);
             projectiles.push(bullet);
         }
 
-        // --- GAME LOOP ---
         function animate() {
             requestAnimationFrame(animate);
             if (!gameActive) {
@@ -305,11 +304,11 @@
             player.userData.vy += GRAVITY;
             player.position.y += player.userData.vy;
 
-            // Robust AABB Collision
+            // Collision logic
             player.userData.onGround = false;
             const pX = player.position.x;
             const pY = player.position.y;
-            const pRadius = 0.6; // Vertical hit offset
+            const pRadius = 0.75; // Matches half of scale.y (1.5)
 
             platforms.forEach(p => {
                 const pWidth = p.geometry.parameters.width;
@@ -318,11 +317,10 @@
                 const left = p.position.x - pWidth/2;
                 const right = p.position.x + pWidth/2;
                 const top = p.position.y + pHeight/2;
-                const bottom = p.position.y - pHeight/2;
 
-                // Horizontal check
-                if (pX > left - 0.4 && pX < right + 0.4) {
-                    // Vertical check for falling onto platform
+                // Horizontal AABB check
+                if (pX > left - 0.5 && pX < right + 0.5) {
+                    // Vertical check for landing
                     if (pY - pRadius <= top && pY > p.position.y && player.userData.vy <= 0) {
                         player.position.y = top + pRadius;
                         player.userData.vy = 0;
@@ -331,7 +329,7 @@
                 }
             });
 
-            if ((keys['Space'] || keys['KeyW']) && player.userData.onGround) {
+            if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.userData.onGround) {
                 player.userData.vy = JUMP_FORCE;
             }
 
@@ -339,10 +337,7 @@
             enemies.forEach(en => {
                 en.position.x += en.userData.speed;
                 if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.speed *= -1;
-                
-                if(player.position.distanceTo(en.position) < 0.9) {
-                    gameOver();
-                }
+                if(player.position.distanceTo(en.position) < 0.9) gameOver();
             });
 
             // Projectiles
@@ -366,7 +361,7 @@
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
             
             // Death plane
-            if(player.position.y < -5) gameOver();
+            if(player.position.y < -10) gameOver();
 
             renderer.render(scene, camera);
         }
@@ -377,10 +372,7 @@
             const introVideo = document.getElementById('intro-video');
             
             introOverlay.style.display = 'flex';
-            introVideo.play().catch(e => { 
-                console.log("Video block, skipping to game");
-                closeIntro(); 
-            });
+            introVideo.play().catch(e => { closeIntro(); });
             introVideo.onended = () => { closeIntro(); };
         }
 
