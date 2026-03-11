@@ -9,7 +9,7 @@
         body {
             margin: 0;
             overflow: hidden;
-            background: #1a1a1a;
+            background: #000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none;
         }
@@ -30,24 +30,66 @@
             border: 1px solid rgba(255,255,255,0.15);
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        #game-overlay, #intro-overlay {
+        
+        /* Overlays */
+        .full-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: white;
             z-index: 100;
         }
+
+        /* Menu Screen */
+        #menu-screen {
+            background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070&auto=format&fit=crop'); /* Placeholder PNG-style background */
+            background-size: cover;
+            background-position: center;
+            z-index: 300;
+        }
+        .menu-card {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 2px solid #22d3ee;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-width: 300px;
+        }
+        .menu-btn {
+            padding: 1rem;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .menu-btn:hover {
+            background: #22d3ee;
+            color: black;
+            transform: scale(1.05);
+        }
+
+        /* Intro Video */
         #intro-overlay {
             background: black;
             z-index: 200;
+            display: none; /* Shown after clicking New Game */
         }
+        
         #game-overlay {
+            background: rgba(0,0,0,0.85);
             display: none;
+            color: white;
         }
+
         #boss-ui {
             display: none;
             position: absolute;
@@ -76,24 +118,47 @@
             border: 2px solid rgba(255,255,255,0.2);
             border-radius: 8px;
         }
+        #message-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #22d3ee;
+            color: black;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none;
+            z-index: 500;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center h-screen">
 
     <div id="game-container" class="relative">
-        <!-- Intro Video Overlay -->
-        <div id="intro-overlay">
+        
+        <!-- 1. START MENU SCREEN -->
+        <div id="menu-screen" class="full-overlay">
+            <h1 class="text-6xl font-black mb-8 italic text-cyan-400 drop-shadow-2xl">PIXEL QUEST</h1>
+            <div class="menu-card">
+                <button onclick="onNewGame()" class="menu-btn">New Game</button>
+                <button onclick="showMessage('Load Game feature coming soon!')" class="menu-btn">Load Game</button>
+                <button onclick="showMessage('Options: Master Volume 100%')" class="menu-btn">Options</button>
+            </div>
+        </div>
+
+        <!-- 2. INTRO VIDEO OVERLAY -->
+        <div id="intro-overlay" class="full-overlay">
             <video id="intro-video" preload="auto">
-                <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/logo-melting.mp4" type="video/mp4">
+                <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen-grok.mp4" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
             <div class="mt-6 flex gap-4">
-                <button id="start-btn" onclick="startIntro()" class="px-8 py-3 bg-cyan-500 text-white font-black rounded-full hover:bg-cyan-400 uppercase tracking-widest shadow-lg transition-all">Play Intro</button>
-                <button id="skip-btn" onclick="closeIntro()" class="px-8 py-3 bg-white/10 text-white font-black rounded-full hover:bg-white/20 uppercase tracking-widest border border-white/20 transition-all">Skip</button>
+                <button id="skip-btn" onclick="closeIntro()" class="px-8 py-3 bg-white/10 text-white font-black rounded-full hover:bg-white/20 uppercase tracking-widest border border-white/20 transition-all">Skip Intro</button>
             </div>
-            <p class="mt-4 text-[10px] opacity-50 uppercase tracking-widest">Replace video URL in code for custom intro</p>
         </div>
 
+        <!-- 3. GAME CANVAS -->
         <canvas id="gameCanvas"></canvas>
         
         <div id="boss-ui">
@@ -101,12 +166,14 @@
             <div class="hp-bar"><div id="hp-fill"></div></div>
         </div>
 
-        <div id="game-overlay">
+        <!-- 4. GAME OVER/VICTORY OVERLAY -->
+        <div id="game-overlay" class="full-overlay">
             <h1 id="overlay-title" class="text-6xl font-black mb-8 tracking-tighter italic text-center">GAME OVER</h1>
             <div id="overlay-sub" class="text-xl mb-8 opacity-80 font-bold uppercase tracking-widest text-center"></div>
             <button id="overlay-btn" onclick="resetGame()" class="px-10 py-4 bg-white text-black font-black rounded-full hover:bg-yellow-400 transition-all active:scale-90 uppercase tracking-widest shadow-lg">Try Again</button>
         </div>
 
+        <!-- 5. HUD -->
         <div class="absolute top-4 left-4 ui-panel flex flex-col gap-1">
             <div class="text-xl font-black italic uppercase text-yellow-400">Sprite Engine</div>
             <div id="level-display" class="text-sm font-bold text-white uppercase tracking-widest mb-1">Level 1: Green Hills</div>
@@ -117,42 +184,39 @@
             <div id="mode-indicator" class="text-cyan-400 font-black text-sm mt-1 uppercase tracking-tighter">Play Mode</div>
             <button onclick="toggleMusic()" id="music-btn" class="mt-2 text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded border border-white/20 uppercase font-bold tracking-widest">Toggle Music: OFF</button>
         </div>
-
-        <div id="palette" class="absolute top-4 right-4 ui-panel hidden">
-            <div class="text-[10px] mb-2 font-black opacity-60 uppercase tracking-widest">Tile Palette</div>
-            <div class="flex gap-2">
-                <button onclick="setTileType(1)" class="w-10 h-10 bg-[#6D4C41] border-4 border-white rounded-md transition-all"></button>
-                <button onclick="setTileType(2)" class="w-10 h-10 bg-[#43A047] border-4 border-transparent rounded-md transition-all"></button>
-                <button onclick="setTileType(3)" class="w-10 h-10 bg-[#FFB300] border-4 border-transparent rounded-md transition-all"></button>
-                <button onclick="setTileType(4)" class="w-10 h-10 bg-black border-4 border-transparent rounded-md transition-all"></button>
-                <button onclick="setTileType(0)" class="w-12 h-10 bg-sky-300 border-2 border-transparent text-black text-[10px] font-black rounded-md flex items-center justify-center">ERASE</button>
-            </div>
-        </div>
     </div>
+
+    <div id="message-box"></div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const modeIndicator = document.getElementById('mode-indicator');
-        const levelDisplay = document.getElementById('level-display');
-        const palette = document.getElementById('palette');
-        const overlay = document.getElementById('game-overlay');
+        const menuScreen = document.getElementById('menu-screen');
         const introOverlay = document.getElementById('intro-overlay');
         const introVideo = document.getElementById('intro-video');
-        const overlayTitle = document.getElementById('overlay-title');
-        const overlaySub = document.getElementById('overlay-sub');
-        const overlayBtn = document.getElementById('overlay-btn');
+        const overlay = document.getElementById('game-overlay');
+        const levelDisplay = document.getElementById('level-display');
         const musicBtn = document.getElementById('music-btn');
         const bossUI = document.getElementById('boss-ui');
         const hpFill = document.getElementById('hp-fill');
+        const msgBox = document.getElementById('message-box');
 
-        // --- INTRO LOGIC ---
-        function startIntro() {
-            document.getElementById('start-btn').style.display = 'none';
-            introVideo.play();
+        // --- MENU LOGIC ---
+        function onNewGame() {
+            menuScreen.style.display = 'none';
+            introOverlay.style.display = 'flex';
+            introVideo.play().catch(e => {
+                console.log("Auto-play blocked, waiting for interaction");
+            });
             introVideo.onended = () => {
                 closeIntro();
             };
+        }
+
+        function showMessage(text) {
+            msgBox.innerText = text;
+            msgBox.style.display = 'block';
+            setTimeout(() => { msgBox.style.display = 'none'; }, 2000);
         }
 
         function closeIntro() {
@@ -252,10 +316,8 @@
         canvas.height = 480;
 
         let currentLevelIndex = 0;
-        let isEditMode = false;
-        let selectedTileType = 1;
         let cameraX = 0;
-        let gameActive = false; // Start false for intro
+        let gameActive = false; 
         const keys = {};
 
         const player = {
@@ -320,7 +382,7 @@
                 bgColor: "#1a1a1a",
                 isBoss: true,
                 setup: (w) => {
-                    for(let c=0; c<30; c++) w[ROWS-1][c] = 1; // Arena
+                    for(let c=0; c<30; c++) w[ROWS-1][c] = 1; 
                     boss = { 
                         x: 600, y: 100, width: 120, height: 120, 
                         vx: -2, vy: 0, hp: 10, maxHp: 10, invuln: 0 
@@ -377,10 +439,10 @@
         function victory() {
             gameActive = false;
             overlay.style.display = 'flex';
-            overlayTitle.innerText = "GRAND VICTORY!";
-            overlayTitle.className = "text-6xl font-black mb-4 tracking-tighter italic text-yellow-400";
-            overlaySub.innerText = "You defeated the Boss and saved the Pixel World!";
-            overlayBtn.innerText = "Replay All";
+            document.getElementById('overlay-title').innerText = "GRAND VICTORY!";
+            document.getElementById('overlay-title').className = "text-6xl font-black mb-4 tracking-tighter italic text-yellow-400";
+            document.getElementById('overlay-sub').innerText = "You defeated the Boss and saved the Pixel World!";
+            document.getElementById('overlay-btn').innerText = "Replay All";
             currentLevelIndex = 0;
         }
 
@@ -405,7 +467,6 @@
         function update() {
             if (!gameActive) return;
 
-            // Player movement
             const moveLeft = keys['ArrowLeft'] || keys['KeyA'];
             const moveRight = keys['ArrowRight'] || keys['KeyD'];
 
@@ -433,13 +494,10 @@
 
             if (player.shootCooldown > 0) player.shootCooldown--;
 
-            // Projectile logic
             projectiles.forEach(p => {
                 if (!p.active) return;
                 p.x += p.vx;
-                
                 if (p.x < cameraX || p.x > cameraX + canvas.width) p.active = false;
-                
                 const tx = Math.floor(p.x / TILE_SIZE);
                 const ty = Math.floor(p.y / TILE_SIZE);
                 if (world[ty] && world[ty][tx] > 0 && world[ty][tx] !== 4) p.active = false;
@@ -516,8 +574,8 @@
         function gameOver() {
             gameActive = false;
             overlay.style.display = 'flex';
-            overlayTitle.innerText = "GAME OVER";
-            overlayTitle.className = "text-6xl font-black mb-8 tracking-tighter italic text-red-500";
+            document.getElementById('overlay-title').innerText = "GAME OVER";
+            document.getElementById('overlay-title').className = "text-6xl font-black mb-8 tracking-tighter italic text-red-500";
         }
 
         function handleCollision(isX) {
