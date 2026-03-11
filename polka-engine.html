@@ -215,18 +215,19 @@
             const material = new THREE.SpriteMaterial({ map: texture });
             player = new THREE.Sprite(material);
             player.scale.set(1.5, 1.5, 1);
-            player.position.set(0, 6, 0); // Start high
+            player.position.set(0, 6, 1); // Move slightly forward on Z so it stays in front of planes
             player.userData = { vy: 0, onGround: false, radius: 0.6 };
             scene.add(player);
         }
 
         function createLevel() {
             // Main Floor
-            const grassTex = textureLoader.load(SPRITES.grass);
-            grassTex.wrapS = THREE.RepeatWrapping;
-            grassTex.wrapT = THREE.RepeatWrapping;
-            grassTex.repeat.set(worldWidth / 2, 1);
-            grassTex.magFilter = THREE.NearestFilter;
+            const grassTex = textureLoader.load(SPRITES.grass, (tex) => {
+                tex.wrapS = THREE.RepeatWrapping;
+                tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(worldWidth / 2, 1);
+                tex.magFilter = THREE.NearestFilter;
+            });
             
             const groundGeo = new THREE.PlaneGeometry(worldWidth, 2);
             const groundMat = new THREE.MeshBasicMaterial({ map: grassTex, transparent: true });
@@ -236,8 +237,10 @@
             platforms.push(ground);
 
             // Floating Platforms
-            const brickTex = textureLoader.load(SPRITES.brick);
-            brickTex.magFilter = THREE.NearestFilter;
+            const brickTex = textureLoader.load(SPRITES.brick, (tex) => {
+                tex.magFilter = THREE.NearestFilter;
+                tex.wrapS = THREE.RepeatWrapping;
+            });
             
             for(let i=0; i < 80; i++) {
                 const x = (Math.random() * worldWidth) - (worldWidth/2);
@@ -247,7 +250,14 @@
                 const width = 3;
                 
                 const platGeo = new THREE.PlaneGeometry(width, 1);
-                const platMat = new THREE.MeshBasicMaterial({ map: brickTex, transparent: true });
+                // Create unique material per platform to handle repeat scaling if needed
+                const platMat = new THREE.MeshBasicMaterial({ 
+                    map: brickTex.clone(), 
+                    transparent: true 
+                });
+                platMat.map.repeat.set(width, 1);
+                platMat.map.needsUpdate = true;
+
                 const plat = new THREE.Mesh(platGeo, platMat);
                 plat.position.set(x, y, 0);
                 scene.add(plat);
@@ -262,7 +272,7 @@
             texture.magFilter = THREE.NearestFilter;
             const material = new THREE.SpriteMaterial({ map: texture });
             const enemy = new THREE.Sprite(material);
-            enemy.position.set(x, y, 0);
+            enemy.position.set(x, y, 1); // Keep on same Z plane as player
             enemy.scale.set(1.2, 1.2, 1);
             enemy.userData = { speed: 0.04 + Math.random() * 0.03, range: 4, startX: x };
             scene.add(enemy);
@@ -308,7 +318,7 @@
             player.userData.onGround = false;
             const pX = player.position.x;
             const pY = player.position.y;
-            const pRadius = 0.75; // Matches half of scale.y (1.5)
+            const pRadius = 0.75; 
 
             platforms.forEach(p => {
                 const pWidth = p.geometry.parameters.width;
@@ -319,7 +329,7 @@
                 const top = p.position.y + pHeight/2;
 
                 // Horizontal AABB check
-                if (pX > left - 0.5 && pX < right + 0.5) {
+                if (pX > left - 0.4 && pX < right + 0.4) {
                     // Vertical check for landing
                     if (pY - pRadius <= top && pY > p.position.y && player.userData.vy <= 0) {
                         player.position.y = top + pRadius;
