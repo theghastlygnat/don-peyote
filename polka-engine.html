@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Sprite Engine - WebGL</title>
+    <title>2D Sprite Engine - WebGL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -142,7 +142,7 @@
     </div>
 
     <div id="game-ui" class="hidden">
-        <div id="level-name" class="text-3xl text-cyan-400">Level 1: 3D Plains</div>
+        <div id="level-name" class="text-3xl text-cyan-400">Level 1: WebGL 2D Sprite World</div>
         <div class="text-sm opacity-80">WASD to Move | Space to Jump | Click to Shoot</div>
     </div>
 
@@ -161,6 +161,15 @@
         let gameActive = false;
         let worldWidth = 200;
         
+        const textureLoader = new THREE.TextureLoader();
+        const SPRITES = {
+            player: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/25.png',
+            enemy: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/129.png',
+            grass: 'https://raw.githubusercontent.com/Aris-F/Pixel-Art-Assets/main/Tiles/Grass.png',
+            brick: 'https://raw.githubusercontent.com/Aris-F/Pixel-Art-Assets/main/Tiles/Brick.png',
+            bullet: 'https://raw.githubusercontent.com/Aris-F/Pixel-Art-Assets/main/Items/Coin.png'
+        };
+
         const PLAYER_SPEED = 0.15;
         const JUMP_FORCE = 0.25;
         const GRAVITY = -0.01;
@@ -169,25 +178,25 @@
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 5, 12);
-            camera.lookAt(0, 2, 0);
+            // Use Orthographic Camera for 2D look
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewSize = 10;
+            camera = new THREE.OrthographicCamera(
+                -viewSize * aspect, viewSize * aspect,
+                viewSize, -viewSize,
+                0.1, 1000
+            );
+            camera.position.set(0, 5, 10);
+            camera.lookAt(0, 5, 0);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: false }); // Pixel art looks better without AA
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
-            // Lighting
-            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+            // Lighting (Still useful for MeshBasicMaterial or Phong with sprites)
+            const ambient = new THREE.AmbientLight(0xffffff, 1.0);
             scene.add(ambient);
-
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(10, 20, 10);
-            sun.castShadow = true;
-            scene.add(sun);
 
             clock = new THREE.Clock();
 
@@ -203,62 +212,71 @@
         }
 
         function createPlayer() {
-            const geometry = new THREE.SphereGeometry(0.6, 32, 32);
-            const material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
-            player = new THREE.Mesh(geometry, material);
-            player.position.set(0, 2, 0);
-            player.castShadow = true;
-            player.userData = { vy: 0, onGround: false, radius: 0.6 };
+            const texture = textureLoader.load(SPRITES.player);
+            texture.magFilter = THREE.NearestFilter;
+            const material = new THREE.SpriteMaterial({ map: texture });
+            player = new THREE.Sprite(material);
+            player.scale.set(1.5, 1.5, 1);
+            player.position.set(0, 5, 0);
+            player.userData = { vy: 0, onGround: false, width: 1.2, height: 1.2 };
             scene.add(player);
         }
 
         function createLevel() {
-            // Ground
-            const groundGeo = new THREE.BoxGeometry(worldWidth, 2, 4);
-            const groundMat = new THREE.MeshPhongMaterial({ color: 0x228b22 });
+            // Ground Sprite Loop
+            const grassTex = textureLoader.load(SPRITES.grass);
+            grassTex.wrapS = THREE.RepeatWrapping;
+            grassTex.repeat.set(worldWidth / 2, 1);
+            grassTex.magFilter = THREE.NearestFilter;
+            
+            const groundGeo = new THREE.PlaneGeometry(worldWidth, 2);
+            const groundMat = new THREE.MeshBasicMaterial({ map: grassTex, transparent: true });
             const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.position.y = -1;
-            ground.receiveShadow = true;
+            ground.position.y = 0;
             scene.add(ground);
             platforms.push(ground);
 
-            // Decorative Clouds/Obstacles
+            // Floating Platforms as Sprites
+            const brickTex = textureLoader.load(SPRITES.brick);
+            brickTex.magFilter = THREE.NearestFilter;
+            
             for(let i=0; i < 40; i++) {
                 const x = Math.random() * worldWidth - 50;
-                const y = Math.random() * 5 + 2;
-                const size = Math.random() * 2 + 1;
+                const y = Math.random() * 8 + 3;
+                const width = 2;
                 
-                const boxGeo = new THREE.BoxGeometry(size, 0.5, 2);
-                const boxMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
-                const plat = new THREE.Mesh(boxGeo, boxMat);
+                const platGeo = new THREE.PlaneGeometry(width, 0.8);
+                const platMat = new THREE.MeshBasicMaterial({ map: brickTex, transparent: true });
+                const plat = new THREE.Mesh(platGeo, platMat);
                 plat.position.set(x, y, 0);
-                plat.castShadow = true;
-                plat.receiveShadow = true;
                 scene.add(plat);
                 platforms.push(plat);
 
-                if(Math.random() > 0.7) spawnEnemy(x, y + 1);
+                if(Math.random() > 0.7) spawnEnemy(x, y + 1.2);
             }
         }
 
         function spawnEnemy(x, y) {
-            const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-            const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-            const enemy = new THREE.Mesh(geometry, material);
+            const texture = textureLoader.load(SPRITES.enemy);
+            texture.magFilter = THREE.NearestFilter;
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const enemy = new THREE.Sprite(material);
             enemy.position.set(x, y, 0);
-            enemy.castShadow = true;
-            enemy.userData = { speed: 0.05, range: 3, startX: x };
+            enemy.scale.set(1.2, 1.2, 1);
+            enemy.userData = { speed: 0.05, range: 4, startX: x };
             scene.add(enemy);
             enemies.push(enemy);
         }
 
         function shoot() {
             if(!gameActive) return;
-            const geo = new THREE.SphereGeometry(0.2, 8, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const bullet = new THREE.Mesh(geo, mat);
+            const texture = textureLoader.load(SPRITES.bullet);
+            texture.magFilter = THREE.NearestFilter;
+            const mat = new THREE.SpriteMaterial({ map: texture });
+            const bullet = new THREE.Sprite(mat);
             bullet.position.copy(player.position);
-            bullet.userData = { vx: 0.5 }; 
+            bullet.scale.set(0.5, 0.5, 1);
+            bullet.userData = { vx: 0.4 }; 
             scene.add(bullet);
             projectiles.push(bullet);
         }
@@ -274,22 +292,34 @@
             const delta = clock.getDelta();
 
             // Player Movement
-            if (keys['KeyA'] || keys['ArrowLeft']) player.position.x -= PLAYER_SPEED;
-            if (keys['KeyD'] || keys['ArrowRight']) player.position.x += PLAYER_SPEED;
+            if (keys['KeyA'] || keys['ArrowLeft']) {
+                player.position.x -= PLAYER_SPEED;
+                player.scale.x = -1.5; // Flip sprite
+            }
+            if (keys['KeyD'] || keys['ArrowRight']) {
+                player.position.x += PLAYER_SPEED;
+                player.scale.x = 1.5;
+            }
             
             player.userData.vy += GRAVITY;
             player.position.y += player.userData.vy;
 
-            // Simple Collision
+            // Simple AABB Collision for 2D
             player.userData.onGround = false;
             platforms.forEach(p => {
-                const pBox = new THREE.Box3().setFromObject(p);
-                const playerBox = new THREE.Box3().setFromCenterAndSize(player.position, new THREE.Vector3(1, 1, 1));
+                const pWidth = p.geometry.parameters.width;
+                const pHeight = p.geometry.parameters.height;
                 
-                if (pBox.intersectsBox(playerBox) && player.userData.vy <= 0) {
-                    player.position.y = pBox.max.y + 0.5;
-                    player.userData.vy = 0;
-                    player.userData.onGround = true;
+                const pxMin = p.position.x - pWidth/2;
+                const pxMax = p.position.x + pWidth/2;
+                const pyMax = p.position.y + pHeight/2;
+
+                if (player.position.x > pxMin - 0.5 && player.position.x < pxMax + 0.5) {
+                    if (player.position.y - 0.6 <= pyMax && player.position.y > p.position.y && player.userData.vy <= 0) {
+                        player.position.y = pyMax + 0.6;
+                        player.userData.vy = 0;
+                        player.userData.onGround = true;
+                    }
                 }
             });
 
@@ -302,7 +332,7 @@
                 en.position.x += en.userData.speed;
                 if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.speed *= -1;
                 
-                if(player.position.distanceTo(en.position) < 1) {
+                if(player.position.distanceTo(en.position) < 0.8) {
                     gameOver();
                 }
             });
@@ -311,20 +341,20 @@
             projectiles.forEach((p, idx) => {
                 p.position.x += p.userData.vx;
                 enemies.forEach((en, eIdx) => {
-                    if(p.position.distanceTo(en.position) < 1) {
+                    if(p.position.distanceTo(en.position) < 0.8) {
                         scene.remove(en);
                         enemies.splice(eIdx, 1);
                         scene.remove(p);
                         projectiles.splice(idx, 1);
                     }
                 });
-                if(p.position.x > player.position.x + 20) {
+                if(p.position.x > player.position.x + 25) {
                     scene.remove(p);
                     projectiles.splice(idx, 1);
                 }
             });
 
-            // Camera follow
+            // Camera follow (fixed Y height for 2D scrolling feel)
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
             
             // Death plane
@@ -369,7 +399,12 @@
         }
 
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewSize = 10;
+            camera.left = -viewSize * aspect;
+            camera.right = viewSize * aspect;
+            camera.top = viewSize;
+            camera.bottom = -viewSize;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
