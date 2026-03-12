@@ -138,6 +138,7 @@
     <audio id="bg-music" loop>
         <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-theme.mp3" type="audio/mpeg">
     </audio>
+    
 
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
@@ -185,7 +186,8 @@
         }
 
         function playSound(freq, type, duration, vol) {
-            if (!audioCtx || !musicEnabled) return;
+           
+            if (!audioCtx) return
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
