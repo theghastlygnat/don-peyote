@@ -134,6 +134,11 @@
 </head>
 <body>
 
+    <!-- Background Music -->
+    <audio id="bg-music" loop>
+        <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-theme.mp3" type="audio/mpeg">
+    </audio>
+
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
             <button onclick="onNewGame()" class="menu-btn">New Game</button>
@@ -476,6 +481,13 @@
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('game-ui').classList.remove('hidden');
             
+            // Play background music
+            const music = document.getElementById('bg-music');
+            if (music) {
+                music.volume = 0.4;
+                music.play().catch(e => console.warn("Music auto-play blocked or failed"));
+            }
+
             // Adding a tiny delay to activate game logic
             setTimeout(() => { gameActive = true; }, 100);
         }
@@ -484,6 +496,10 @@
 
         function gameOver() {
             gameActive = false;
+            // Stop music on game over
+            const music = document.getElementById('bg-music');
+            if (music) music.pause();
+            
             alert("Captured by Magikarp! Gold lost: " + stats.gold);
             location.reload();
         }
