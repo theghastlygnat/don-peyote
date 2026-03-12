@@ -151,7 +151,7 @@
     <div id="game-ui" class="hidden">
         <div id="zone-display" class="text-3xl text-cyan-400">The Wilds</div>
         <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Potions: <span id="pot-val">0</span></div>
-        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Click: Shoot | E: Interact</div>
+        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter / J: Shoot | E: Interact</div>
     </div>
 
     <div id="shop-ui">
@@ -258,9 +258,11 @@
             window.addEventListener('keydown', e => { 
                 keys[e.code] = true;
                 if(e.code === 'KeyE') handleInteraction();
+                // Check for shoot keys (Enter or J)
+                if(e.code === 'Enter' || e.code === 'KeyJ') shoot();
             });
             window.addEventListener('keyup', e => keys[e.code] = false);
-            window.addEventListener('mousedown', shoot);
+            // Removed mousedown listener for shooting
             window.addEventListener('resize', onResize);
 
             animate();
@@ -440,11 +442,9 @@
             renderer.render(scene, camera);
         }
 
-        function shoot(e) {
-            // Prevent shooting if UI overlays are open
+        function shoot() {
+            // Prevent shooting if UI overlays are open or game not active
             if(!gameActive || document.getElementById('shop-ui').style.display === 'block') return;
-            // Prevent shooting precisely when clicking the 'Enter World' menu button
-            if(e.target.classList && e.target.classList.contains('menu-btn')) return;
 
             const bullet = new THREE.Sprite(MATERIALS.bullet);
             bullet.position.copy(player.position);
@@ -476,7 +476,7 @@
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('game-ui').classList.remove('hidden');
             
-            // Adding a tiny delay to activate game logic so the start button click doesn't trigger a shot
+            // Adding a tiny delay to activate game logic
             setTimeout(() => { gameActive = true; }, 100);
         }
 
