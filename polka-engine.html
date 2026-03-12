@@ -24,7 +24,7 @@
 
         #menu-screen {
             background: url('https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen.png');
-            background-color: #1e3a8a; /* Solid fallback color if image dies */
+            background-color: #1e3a8a;
             background-size: cover;
             background-position: center;
             z-index: 300;
@@ -57,6 +57,24 @@
         }
 
         .menu-btn:hover { transform: scale(1.1); color: #22d3ee; }
+
+        #options-overlay {
+            background: rgba(0,0,0,0.85);
+            z-index: 500;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .options-panel {
+            background: #1e293b;
+            padding: 3rem;
+            border-radius: 30px;
+            border: 4px solid #22d3ee;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 350px;
+        }
 
         #game-ui {
             position: absolute;
@@ -138,14 +156,21 @@
     <audio id="bg-music" loop>
         <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-theme.mp3" type="audio/mpeg">
     </audio>
-    
 
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
             <button onclick="onNewGame()" class="menu-btn">New Game</button>
-            <button onclick="toggleMusic()" id="music-btn" class="menu-btn">Music: ON</button>
             <button onclick="showMessage('Save disabled in Demo')" class="menu-btn">Load Game</button>
-            <button onclick="showMessage('Graphics: Ultra')" class="menu-btn">Options</button>
+            <button onclick="openOptions()" class="menu-btn">Options</button>
+        </div>
+    </div>
+
+    <div id="options-overlay" class="full-overlay">
+        <div class="options-panel">
+            <h2 class="text-4xl text-cyan-400 text-center mb-4">Settings</h2>
+            <button onclick="toggleMusic()" id="music-btn" class="menu-btn bg-cyan-900/50 rounded-lg">Music: ON</button>
+            <div class="text-white text-center text-xl opacity-60">Graphics: Ultra</div>
+            <button onclick="closeOptions()" class="mt-4 p-2 bg-red-600 text-white rounded-lg">Back to Menu</button>
         </div>
     </div>
 
@@ -186,8 +211,7 @@
         }
 
         function playSound(freq, type, duration, vol) {
-           
-            if (!audioCtx) return
+            if (!audioCtx || !musicEnabled) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
@@ -200,7 +224,6 @@
             osc.stop(audioCtx.currentTime + duration);
         }
 
-        // Specific SFX
         const sfx = {
             jump: () => playSound(400, 'square', 0.1, 0.1),
             shoot: () => playSound(150, 'sawtooth', 0.1, 0.05),
@@ -477,6 +500,16 @@
             scene.add(bullet);
         }
 
+        // --- OPTION LOGIC ---
+        function openOptions() {
+            initAudio();
+            document.getElementById('options-overlay').style.display = 'flex';
+        }
+
+        function closeOptions() {
+            document.getElementById('options-overlay').style.display = 'none';
+        }
+
         function toggleMusic() {
             musicEnabled = !musicEnabled;
             const btn = document.getElementById('music-btn');
@@ -491,7 +524,7 @@
         }
 
         function onNewGame() {
-            initAudio(); // Initialize Web Audio on user gesture
+            initAudio();
             document.getElementById('menu-screen').style.display = 'none';
             const introOverlay = document.getElementById('intro-overlay');
             const introVideo = document.getElementById('intro-video');
