@@ -371,12 +371,9 @@
             
             // The Pub
             const pubBuilding = new THREE.Sprite(MATERIALS.pub);
-            // Lowering Y from 6 to 6 to make bottom level with character feet
-            // Ground starts at Y=1 (tile height/2). 
-            // Building height is 10. (10/2) + 1 = 6. 
-            // Adjusting based on user feedback that it was floating: 
-            // Moving Y down by 2 units (~40px)
-            pubBuilding.position.set(townCenter - 25, 6, 0.5);
+            // Player feet are at Y = 1.1 (Ground top Y=1 + 0.1 offset in collision logic)
+            // Building scale is H=10. To make bottom sit at Y=1.1, center must be at 1.1 + (10/2) = 6.1
+            pubBuilding.position.set(townCenter - 25, 6.1, 0.5);
             pubBuilding.scale.set(12, 10, 1);
             scene.add(pubBuilding);
 
