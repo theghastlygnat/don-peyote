@@ -150,7 +150,7 @@
         @keyframes bounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
     </style>
 </head>
-<body>
+<body onclick="tryStartMusic()">
 
     <!-- Background Music -->
     <audio id="bg-music" loop>
@@ -205,9 +205,22 @@
     <script>
         // --- AUDIO ENGINE ---
         let audioCtx;
+        let musicStarted = false;
+
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function tryStartMusic() {
+            initAudio();
+            if (musicEnabled && !musicStarted) {
+                const music = document.getElementById('bg-music');
+                music.volume = 0.4;
+                music.play().then(() => {
+                    musicStarted = true;
+                }).catch(e => console.log("Autoplay prevented; waiting for user interaction."));
             }
         }
 
@@ -249,7 +262,7 @@
         let MATERIALS = {}; 
 
         const SPRITES = {
-            player: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/25.png',
+            player: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-standing-sprite-sheet-2x1-140Px140P.png',
             enemy: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/129.png',
             npc: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/151.png',
             shopkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/122.png',
@@ -273,12 +286,15 @@
             return tex;
         }
 
-        function createSafeMaterial(url, fallbackColor) {
+        function createSafeMaterial(url, fallbackColor, tilesX = 1, tilesY = 1) {
             const mat = new THREE.SpriteMaterial({ map: createSolidTexture(fallbackColor) });
             textureLoader.load(
                 url, 
                 (t) => { 
                     t.magFilter = THREE.NearestFilter; 
+                    if (tilesX > 1 || tilesY > 1) {
+                        t.repeat.set(1 / tilesX, 1 / tilesY);
+                    }
                     mat.map = t; 
                     mat.needsUpdate = true; 
                 },
@@ -306,7 +322,7 @@
             clock = new THREE.Clock();
 
             MATERIALS = {
-                player: createSafeMaterial(SPRITES.player, '#ffff00'),
+                player: createSafeMaterial(SPRITES.player, '#ffff00', 2, 1),
                 enemy: createSafeMaterial(SPRITES.enemy, '#ff0000'),
                 npc: createSafeMaterial(SPRITES.npc, '#ffffff'),
                 shopkeeper: createSafeMaterial(SPRITES.shopkeeper, '#ff00ff'),
@@ -324,6 +340,7 @@
                 keys[e.code] = true;
                 if(e.code === 'KeyE') handleInteraction();
                 if(e.code === 'Enter' || e.code === 'KeyJ') shoot();
+                tryStartMusic();
             });
             window.addEventListener('keyup', e => keys[e.code] = false);
             window.addEventListener('resize', onResize);
@@ -335,7 +352,7 @@
             player = new THREE.Sprite(MATERIALS.player);
             player.scale.set(1.5, 1.5, 1);
             player.position.set(townCenter, 5, 2);
-            player.userData = { vy: 0, onGround: false };
+            player.userData = { vy: 0, onGround: false, facingRight: true };
             scene.add(player);
             camera.position.x = townCenter;
         }
@@ -443,8 +460,18 @@
             if(!gameActive) return;
 
             const speed = 0.15 * stats.speedMult;
-            if(keys['KeyA'] || keys['ArrowLeft']) { player.position.x -= speed; player.scale.x = -1.5; }
-            if(keys['KeyD'] || keys['ArrowRight']) { player.position.x += speed; player.scale.x = 1.5; }
+            if(keys['KeyA'] || keys['ArrowLeft']) { 
+                player.position.x -= speed; 
+                player.userData.facingRight = false; 
+            }
+            if(keys['KeyD'] || keys['ArrowRight']) { 
+                player.position.x += speed; 
+                player.userData.facingRight = true; 
+            }
+
+            if(player.material.map) {
+                player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
+            }
 
             player.userData.vy += GRAVITY;
             player.position.y += player.userData.vy;
@@ -521,7 +548,7 @@
             const bullet = new THREE.Sprite(MATERIALS.bullet);
             bullet.position.copy(player.position);
             bullet.scale.set(0.6, 0.6, 1);
-            bullet.userData = { vx: player.scale.x > 0 ? 0.4 : -0.4 };
+            bullet.userData = { vx: player.userData.facingRight ? 0.4 : -0.4 };
             projectiles.push(bullet);
             scene.add(bullet);
         }
@@ -542,7 +569,7 @@
             
             const music = document.getElementById('bg-music');
             if (musicEnabled) {
-                if (gameActive) music.play().catch(e => console.warn(e));
+                music.play().catch(e => console.warn(e));
             } else {
                 music.pause();
             }
@@ -576,11 +603,8 @@
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('game-ui').classList.remove('hidden');
             
-            const music = document.getElementById('bg-music');
-            if (music && musicEnabled) {
-                music.volume = 0.4;
-                music.play().catch(e => console.warn("Music play blocked"));
-            }
+            // Ensure music is playing if it wasn't already
+            tryStartMusic();
 
             setTimeout(() => { gameActive = true; }, 100);
         }
