@@ -371,9 +371,10 @@
             
             // The Pub
             const pubBuilding = new THREE.Sprite(MATERIALS.pub);
-            // Player feet are at Y = 1.1 (Ground top Y=1 + 0.1 offset in collision logic)
-            // Building scale is H=10. To make bottom sit at Y=1.1, center must be at 1.1 + (10/2) = 6.1
-            pubBuilding.position.set(townCenter - 25, 6.1, 0.5);
+            // To account for invisible padding at the bottom of the PNG, 
+            // we lower the Y coordinate further. Previously at 6.1 (mathematical bottom), 
+            // lowering it to 5.0 (or lower if needed) to bury the "padding" beneath the ground line.
+            pubBuilding.position.set(townCenter - 25, 5.0, 0.5);
             pubBuilding.scale.set(12, 10, 1);
             scene.add(pubBuilding);
 
@@ -503,7 +504,7 @@
 
             let near = false;
             npcs.forEach(npc => { if(player.position.distanceTo(npc.position) < 2.5) near = true; });
-            document.getElementById('interaction-prompt').style.display = near ? 'block' : 'none';
+            document.getElementById('interaction-prompt').style.display = 'none';
 
             enemies.forEach(en => {
                 en.position.x += 0.04 * en.userData.dir;
