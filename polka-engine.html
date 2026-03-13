@@ -350,7 +350,8 @@
 
         function createPlayer() {
             player = new THREE.Sprite(MATERIALS.player);
-            player.scale.set(1.5, 1.5, 1);
+            // 2.2 matches the intended 140px relative to the 8-unit orthographic camera height
+            player.scale.set(2.2, 2.2, 1);
             player.position.set(townCenter, 5, 2);
             player.userData = { vy: 0, onGround: false, facingRight: true };
             scene.add(player);
@@ -470,6 +471,7 @@
             }
 
             if(player.material.map) {
+                // Second sprite (index 1) is facing right, first (index 0) is facing left
                 player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
             }
 
@@ -478,10 +480,11 @@
 
             player.userData.onGround = false;
             platforms.forEach(p => {
-                if(Math.abs(player.position.x - p.x) < (p.w/2 + 0.4)) {
+                if(Math.abs(player.position.x - p.x) < (p.w/2 + 0.6)) { // Adjusted for wider scale
                     const top = p.y + p.h/2;
-                    if(player.position.y - 0.75 <= top && player.position.y > p.y && player.userData.vy <= 0) {
-                        player.position.y = top + 0.75;
+                    // Player half-height is now ~1.1
+                    if(player.position.y - 1.1 <= top && player.position.y > p.y && player.userData.vy <= 0) {
+                        player.position.y = top + 1.1;
                         player.userData.vy = 0;
                         player.userData.onGround = true;
                     }
@@ -503,7 +506,7 @@
             enemies.forEach(en => {
                 en.position.x += 0.04 * en.userData.dir;
                 if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
-                if(player.position.distanceTo(en.position) < 0.9) {
+                if(player.position.distanceTo(en.position) < 1.2) { // Adjusted hit detection for scale
                     if(stats.potions > 0) {
                         stats.potions--;
                         player.position.y += 2;
