@@ -171,7 +171,7 @@
             <button onclick="toggleMusic()" id="music-btn" class="menu-btn bg-cyan-900/50 rounded-lg">Music: ON</button>
             <button onclick="toggleSfx()" id="sfx-btn" class="menu-btn bg-cyan-900/50 rounded-lg">Sounds: ON</button>
             <div class="text-white text-center text-xl opacity-60">Graphics: Ultra</div>
-            <button onclick="closeOptions()" class="mt-4 p-2 bg-red-600 text-white rounded-lg">Back to Menu</button>
+            <button onclick="closeOptions()" class="mt-4 p-2 bg-red-600 text-white rounded-lg">Close</button>
         </div>
     </div>
 
@@ -184,7 +184,7 @@
     <div id="game-ui" class="hidden">
         <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
         <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Potions: <span id="pot-val">0</span></div>
-        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter / J: Shoot | E: Interact</div>
+        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter / J: Shoot | E: Interact | Esc: Options</div>
     </div>
 
     <div id="shop-ui">
@@ -250,6 +250,7 @@
         let player, enemies = [], platforms = [], npcs = [], projectiles = [];
         let keys = {};
         let gameActive = false;
+        let isPaused = false;
         let musicEnabled = true;
         let sfxEnabled = true;
         let stats = { gold: 0, potions: 0, speedMult: 1 };
@@ -340,6 +341,7 @@
                 keys[e.code] = true;
                 if(e.code === 'KeyE') handleInteraction();
                 if(e.code === 'Enter' || e.code === 'KeyJ') shoot();
+                if(e.code === 'Escape') toggleOptionsFromKey();
                 tryStartMusic();
             });
             window.addEventListener('keyup', e => keys[e.code] = false);
@@ -424,6 +426,7 @@
         }
 
         function handleInteraction() {
+            if(isPaused) return;
             npcs.forEach(npc => {
                 if(player.position.distanceTo(npc.position) < 2.5) {
                     if(npc.userData.type === 'shop') {
@@ -459,7 +462,11 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            if(!gameActive) return;
+            if(!gameActive || isPaused) {
+                // Render once to keep current frame visible if we just paused
+                renderer.render(scene, camera);
+                return;
+            }
 
             const speed = 0.15 * stats.speedMult;
             if(keys['KeyA'] || keys['ArrowLeft']) { 
@@ -547,7 +554,7 @@
         }
 
         function shoot() {
-            if(!gameActive || document.getElementById('shop-ui').style.display === 'block') return;
+            if(!gameActive || isPaused || document.getElementById('shop-ui').style.display === 'block') return;
             sfx.shoot();
             const bullet = new THREE.Sprite(MATERIALS.bullet);
             bullet.position.copy(player.position);
@@ -557,13 +564,25 @@
             scene.add(bullet);
         }
 
+        function toggleOptionsFromKey() {
+            if (!gameActive) return;
+            const overlay = document.getElementById('options-overlay');
+            if (overlay.style.display === 'flex') {
+                closeOptions();
+            } else {
+                openOptions();
+            }
+        }
+
         function openOptions() {
             initAudio();
             document.getElementById('options-overlay').style.display = 'flex';
+            if (gameActive) isPaused = true;
         }
 
         function closeOptions() {
             document.getElementById('options-overlay').style.display = 'none';
+            if (gameActive) isPaused = false;
         }
 
         function toggleMusic() {
