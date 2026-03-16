@@ -155,6 +155,7 @@
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
             <button onclick="onNewGame()" class="menu-btn">New Game</button>
+            <button onclick="onLoadGame()" class="menu-btn">Load Game</button>
             <button onclick="openOptions()" class="menu-btn">Settings</button>
         </div>
     </div>
@@ -167,6 +168,7 @@
             <div class="space-y-4">
                 <div class="bg-slate-800/50 p-4 rounded-2xl">
                     <button onclick="toggleMusic()" id="music-btn" class="w-full py-2 bg-slate-700 rounded-lg text-white mb-2">Music: ON</button>
+                    <button onclick="toggleSFX()" id="sfx-btn" class="w-full py-2 bg-slate-700 rounded-lg text-white mb-2">Sound FX: ON</button>
                     <div class="px-2">
                         <label class="text-xs text-slate-400 block mb-1">Volume</label>
                         <input type="range" min="0" max="100" value="40" class="volume-slider" oninput="updateVolume(this.value)">
@@ -223,7 +225,7 @@
         let player, enemies = [], platforms = [], projectiles = [];
         let keys = {};
         let gameActive = false, isPaused = false;
-        let audioCtx, globalMusicVol = 0.4, musicEnabled = true;
+        let audioCtx, globalMusicVol = 0.4, musicEnabled = true, sfxEnabled = true;
         
         // Debug Engine State
         let debug = {
@@ -476,6 +478,12 @@
             gameActive = true;
         }
 
+        function onLoadGame() {
+            console.log("Loading saved game state...");
+            // Load saved state logic goes here
+            onNewGame();
+        }
+
         function toggleGamePause() {
             if (!gameActive) return;
             if (isPaused) closeOptions(); else openOptions();
@@ -484,6 +492,7 @@
         function tryStartMenuMusic() { /* Placeholder for audio context handling */ }
         function updateVolume(v) { globalMusicVol = v/100; }
         function toggleMusic() { musicEnabled = !musicEnabled; document.getElementById('music-btn').innerText = `Music: ${musicEnabled?'ON':'OFF'}`; }
+        function toggleSFX() { sfxEnabled = !sfxEnabled; document.getElementById('sfx-btn').innerText = `Sound FX: ${sfxEnabled?'ON':'OFF'}`; }
         function shoot() { /* Logic for projectile spawning */ }
 
         window.onload = init;
