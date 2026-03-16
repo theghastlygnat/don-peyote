@@ -135,18 +135,26 @@
             object-fit: cover;
         }
 
+        /* Updated Tooltip Styling to Top Right */
         #interaction-prompt {
             position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            color: black;
-            padding: 5px 15px;
-            border-radius: 20px;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 3px solid #22d3ee;
             display: none;
-            animation: bounce 1s infinite;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 200;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         #fade-overlay {
@@ -158,8 +166,6 @@
             transition: opacity 0.5s;
             z-index: 1000;
         }
-
-        @keyframes bounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
 
         .volume-slider {
             -webkit-appearance: none;
@@ -474,23 +480,19 @@
             }, 500);
         }
 
-        // --- RESPAWN SYSTEM ---
         function triggerRespawn() {
             if (player.userData.isRespawning) return;
             player.userData.isRespawning = true;
             sfx.damage();
             
-            // UI Feedback
             const fade = document.getElementById('fade-overlay');
             fade.style.opacity = '1';
             
-            // Penalty
             const penalty = Math.floor(stats.gold * 0.2);
             stats.gold -= penalty;
             showMessage(`Defeated! Lost ${penalty} Gold. Waking up in Town...`);
 
             setTimeout(() => {
-                // Reset State
                 isInside = false;
                 worldGroup.visible = true;
                 interiorGroup.visible = false;
@@ -529,19 +531,37 @@
                 if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
             }
 
+            // Logic for the Interaction Prompt
+            const prompt = document.getElementById('interaction-prompt');
+            let foundInteraction = false;
+
             if (!isInside && pubBuilding) {
                 const doorPosX = pubBuilding.position.x - 1.2;
                 const distToDoor = Math.abs(player.position.x - doorPosX);
                 pubBuilding.material = distToDoor < 1.5 ? MATERIALS.pubOpen : MATERIALS.pub;
-                const prompt = document.getElementById('interaction-prompt');
-                if (distToDoor < 1.5) { prompt.innerText = "Press 'E' to Enter Pub"; prompt.style.display = "block"; }
-                else prompt.style.display = "none";
+                if (distToDoor < 1.5) { 
+                    prompt.innerText = "E: Enter Sprite Lounge"; 
+                    foundInteraction = true; 
+                }
             } else if (isInside) {
                 const distToExit = Math.abs(player.position.x - (-8));
-                const prompt = document.getElementById('interaction-prompt');
-                if (distToExit < 1.5) { prompt.innerText = "Press 'E' to Leave"; prompt.style.display = "block"; }
-                else prompt.style.display = "none";
+                if (distToExit < 1.5) { 
+                    prompt.innerText = "E: Leave Building"; 
+                    foundInteraction = true; 
+                }
             }
+
+            // Check NPC proximity for prompt
+            if (!foundInteraction) {
+                npcs.forEach(n => {
+                    if (n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) {
+                        prompt.innerText = n.sprite.userData.type === 'shop' ? "E: Open Shop" : `E: Talk to ${n.sprite.userData.name}`;
+                        foundInteraction = true;
+                    }
+                });
+            }
+
+            prompt.style.display = foundInteraction ? "block" : "none";
 
             player.userData.vy += GRAVITY;
             player.position.y += player.userData.vy;
