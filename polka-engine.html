@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World</title>
+    <title>Don Peyote - Pub Update</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -58,26 +58,6 @@
 
         .menu-btn:hover { transform: scale(1.1); color: #22d3ee; }
 
-        #options-overlay {
-            background: rgba(0,0,0,0.85);
-            z-index: 500;
-            display: none;
-            pointer-events: auto;
-        }
-
-        .options-panel {
-            background: #1e293b;
-            padding: 2rem;
-            border-radius: 30px;
-            border: 4px solid #22d3ee;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            min-width: 380px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
         #game-ui {
             position: absolute;
             top: 20px;
@@ -89,12 +69,13 @@
             flex-direction: column; gap: 5px;
         }
 
-        #shop-ui {
+        /* Shop & Pub UI */
+        .interaction-ui {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(20, 10, 5, 0.95);
             border: 4px solid #facc15;
             padding: 2rem;
             border-radius: 20px;
@@ -102,15 +83,16 @@
             display: none;
             z-index: 500;
             pointer-events: auto;
-            min-width: 300px;
+            min-width: 320px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
 
         .shop-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #333;
+            padding: 12px;
+            border-bottom: 1px solid #443322;
         }
 
         .buy-btn {
@@ -118,21 +100,18 @@
             padding: 5px 15px;
             border-radius: 5px;
             cursor: pointer;
+            font-family: sans-serif;
+            font-weight: bold;
         }
 
-        .buy-btn:hover { background: #22c55e; }
-
-        #intro-overlay {
+        #transition-overlay {
+            position: fixed;
+            inset: 0;
             background: black;
-            z-index: 400;
-            display: none;
-            pointer-events: auto;
-        }
-        
-        #intro-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+            z-index: 1000;
         }
 
         #interaction-prompt {
@@ -145,28 +124,7 @@
             padding: 5px 15px;
             border-radius: 20px;
             display: none;
-            animation: bounce 1s infinite;
-        }
-
-        @keyframes bounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -10px); } }
-
-        .volume-slider {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 10px;
-            background: #334155;
-            outline: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #22d3ee;
-            border-radius: 50%;
-            cursor: pointer;
+            z-index: 200;
         }
     </style>
 </head>
@@ -179,118 +137,50 @@
         <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/Whispers_of_the_Verdant_Keep.mp3" type="audio/mpeg">
     </audio>
 
+    <div id="transition-overlay"></div>
+
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
             <button onclick="onNewGame()" class="menu-btn">New Game</button>
-            <button onclick="showMessage('Save disabled in Demo')" class="menu-btn">Load Game</button>
             <button onclick="openOptions()" class="menu-btn">Options</button>
         </div>
     </div>
 
-    <!-- OPTIONS OVERLAY -->
-    <div id="options-overlay" class="full-overlay">
-        <div class="options-panel">
-            <h2 class="text-4xl text-cyan-400 text-center mb-2">Settings</h2>
-            
-            <button onclick="toggleMusic()" id="music-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Music: ON</button>
-            
-            <div class="flex flex-col gap-1 px-4">
-                <label class="text-white text-sm flex justify-between">
-                    <span>Music Volume</span>
-                    <span id="vol-label">40%</span>
-                </label>
-                <input type="range" min="0" max="100" value="40" class="volume-slider" id="music-vol" oninput="updateVolume(this.value)">
-            </div>
-
-            <button onclick="toggleSfx()" id="sfx-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Sounds: ON</button>
-            
-            <div class="mt-4 pt-4 border-t border-cyan-800/50">
-                <h3 class="text-xl text-yellow-400 text-center mb-3">Debug Menu</h3>
-                <button onclick="toggleWireframe()" id="wireframe-btn" class="w-full py-2 bg-yellow-900/30 border border-yellow-500/50 rounded-lg text-white text-lg">
-                    Wireframe Mode: OFF
-                </button>
-            </div>
-
-            <button onclick="closeOptions()" class="mt-4 p-3 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-colors">Close</button>
-        </div>
-    </div>
-
-    <div id="intro-overlay" class="full-overlay">
-        <video id="intro-video" preload="auto">
-            <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen-grok.mp4" type="video/mp4">
-        </video>
-    </div>
-
     <div id="game-ui" class="hidden">
         <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
-        <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Potions: <span id="pot-val">0</span></div>
-        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter / J: Shoot | E: Interact | Esc: Options</div>
+        <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Beers: <span id="beer-val">0</span></div>
+        <div class="text-sm opacity-80">WASD: Move | Space: Jump | E: Interact / Enter Pub</div>
     </div>
 
-    <div id="shop-ui">
-        <h2 class="text-2xl text-yellow-400 mb-4 text-center">Town Shop</h2>
-        <div class="shop-item">
-            <span>Health Potion</span>
-            <button class="buy-btn" onclick="buyItem('potion', 10)">10 Gold</button>
-        </div>
-        <div class="shop-item">
-            <span>Speed Boots</span>
-            <button class="buy-btn" onclick="buyItem('boots', 50)">50 Gold</button>
-        </div>
-        <button class="mt-4 w-full text-red-400" onclick="closeShop()">Close</button>
+    <!-- Generic Shop/Pub UI -->
+    <div id="shop-ui" class="interaction-ui">
+        <h2 id="shop-title" class="text-3xl text-yellow-500 mb-4 text-center">Town Shop</h2>
+        <div id="shop-items-container"></div>
+        <button class="mt-6 w-full py-2 bg-red-700 rounded-lg" onclick="closeInteractionUI()">Exit</button>
     </div>
 
-    <div id="interaction-prompt">Press 'E' to Talk</div>
+    <div id="interaction-prompt">Press 'E'</div>
 
     <script>
-        // --- AUDIO-ENGINE ---
+        // --- AUDIO ---
         let audioCtx;
-        let menuMusicStarted = false;
-        let gameMusicStarted = false;
         let globalMusicVol = 0.4;
         let musicEnabled = true;
         let sfxEnabled = true;
 
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        function updateVolume(val) {
-            globalMusicVol = val / 100;
-            document.getElementById('vol-label').innerText = val + "%";
-            const menuMusic = document.getElementById('menu-music');
-            const gameMusic = document.getElementById('game-music');
-            menuMusic.volume = globalMusicVol;
-            gameMusic.volume = globalMusicVol;
-        }
-
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         function tryStartMenuMusic() {
             initAudio();
-            if (musicEnabled && !menuMusicStarted && !gameActive) {
-                const menuMusic = document.getElementById('menu-music');
-                menuMusic.volume = globalMusicVol;
-                menuMusic.play().then(() => {
-                    menuMusicStarted = true;
-                }).catch(e => console.log("Waiting for user interaction..."));
-            }
+            const m = document.getElementById('menu-music');
+            if (musicEnabled && m.paused && !gameActive) { m.volume = globalMusicVol; m.play().catch(()=>{}); }
         }
 
-        function switchMusicToGame() {
-            const menuMusic = document.getElementById('menu-music');
-            const gameMusic = document.getElementById('game-music');
-            menuMusic.pause();
-            menuMusicStarted = false;
-            if (musicEnabled) {
-                gameMusic.volume = globalMusicVol;
-                gameMusic.play().then(() => {
-                    gameMusicStarted = true;
-                }).catch(e => console.log("Music play blocked."));
-            }
-        }
+        const sfx = {
+            collect: () => playSfx(800, 'sine', 0.2, 0.1),
+            door: () => playSfx(120, 'square', 0.3, 0.15)
+        };
 
-        function playSound(freq, type, duration, vol) {
+        function playSfx(freq, type, duration, vol) {
             if (!audioCtx || !sfxEnabled) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -304,234 +194,228 @@
             osc.stop(audioCtx.currentTime + duration);
         }
 
-        const sfx = {
-            jump: () => playSound(400, 'square', 0.1, 0.1),
-            shoot: () => playSound(150, 'sawtooth', 0.1, 0.05),
-            collect: () => playSound(800, 'sine', 0.2, 0.1),
-            damage: () => playSound(100, 'triangle', 0.3, 0.2)
-        };
-
-        // --- STATE ---
+        // --- GAME ENGINE ---
         let scene, camera, renderer, clock;
-        let player, enemies = [], platforms = [], npcs = [], projectiles = [];
+        let player, platforms = [], npcs = [], items = [];
         let keys = {};
-        let gameActive = false;
-        let isPaused = false;
-        let wireframeMode = false;
-        let stats = { gold: 0, potions: 0, speedMult: 1 };
-        
-        const VIEW_SIZE = 4.2; 
+        let gameActive = false, isPaused = false;
+        let currentZone = 'town'; // 'town' or 'pub'
+        let stats = { gold: 100, beers: 0 };
+        const VIEW_SIZE = 4.5;
         const textureLoader = new THREE.TextureLoader();
-        const townCenter = 0; 
-        const townRadius = 50;
-        
-        let MATERIALS = {}; 
-        let pubBuilding = null; // Ref for the pub
+
+        let MATERIALS = {};
+        let pubBuilding = null;
 
         const SPRITES = {
-            playerStand: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-standing-sprite-sheet-2x1-140Px140P.png',
-            playerRunLeft: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-left-12fps.png',
-            playerRunRight: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-right-12fps.png',
-            enemy: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/129.png',
-            npc: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/151.png',
-            shopkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/122.png',
-            grass: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/1.png',
-            brick: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/11.png',
-            bullet: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/items/poke-ball.png',
+            stand: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-standing-sprite-sheet-2x1-140Px140P.png',
+            runR: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-right-12fps.png',
+            runL: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-left-12fps.png',
             pub: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/pub850x700.png',
             pubOpen: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/pub-door-open-850x700.png',
-            barkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/113.png'
+            barkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/other/official-artwork/113.png',
+            pubBg: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen.png' // Mock interior
         };
 
-        const GRAVITY = -0.015;
-        const JUMP_FORCE = 0.32;
-
-        function createSolidTexture(color) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 16; canvas.height = 16;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = color; ctx.fillRect(0,0,16,16);
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter;
-            return tex;
-        }
-
-        function createSafeMaterial(url, fallbackColor, tilesX = 1, tilesY = 1) {
-            const mat = new THREE.SpriteMaterial({ map: createSolidTexture(fallbackColor) });
-            textureLoader.load(url, (t) => { 
-                t.magFilter = THREE.NearestFilter; 
-                if (tilesX > 1 || tilesY > 1) t.repeat.set(1 / tilesX, 1 / tilesY);
-                mat.map = t; 
-                mat.needsUpdate = true; 
-            }, undefined, () => console.warn(`Failed to load ${url}`));
-            return mat;
-        }
-
-        function toggleWireframe() {
-            wireframeMode = !wireframeMode;
-            document.getElementById('wireframe-btn').innerText = `Wireframe Mode: ${wireframeMode ? 'ON' : 'OFF'}`;
-            document.getElementById('wireframe-btn').classList.toggle('bg-yellow-500/50', wireframeMode);
-            platforms.forEach(p => { if (p.helper) p.helper.visible = wireframeMode; });
-        }
-
-        function createBoxHelper(mesh, color = 0x00ff00) {
-            const box = new THREE.BoxHelper(mesh, color);
-            scene.add(box);
-            box.visible = wireframeMode;
-            return box;
+        function createMat(url, tx=1, ty=1) {
+            const m = new THREE.SpriteMaterial({ map: textureLoader.load(url, t => {
+                t.magFilter = THREE.NearestFilter;
+                t.repeat.set(1/tx, 1/ty);
+            })});
+            return m;
         }
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
-
             const aspect = window.innerWidth / window.innerHeight;
             camera = new THREE.OrthographicCamera(-VIEW_SIZE * aspect, VIEW_SIZE * aspect, VIEW_SIZE, -VIEW_SIZE, 0.1, 1000);
-            camera.position.set(0, 5, 10);
-
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0xffffff, 1.2));
             clock = new THREE.Clock();
 
             MATERIALS = {
-                playerStand: createSafeMaterial(SPRITES.playerStand, '#ffff00', 2, 1),
-                playerRunLeft: createSafeMaterial(SPRITES.playerRunLeft, '#ffff00', 11, 1),
-                playerRunRight: createSafeMaterial(SPRITES.playerRunRight, '#ffff00', 11, 1),
-                enemy: createSafeMaterial(SPRITES.enemy, '#ff0000'),
-                npc: createSafeMaterial(SPRITES.npc, '#ffffff'),
-                shopkeeper: createSafeMaterial(SPRITES.shopkeeper, '#ff00ff'),
-                grass: createSafeMaterial(SPRITES.grass, '#2d5a27'),
-                brick: createSafeMaterial(SPRITES.brick, '#8b4513'),
-                bullet: createSafeMaterial(SPRITES.bullet, '#ffffff'),
-                pub: createSafeMaterial(SPRITES.pub, '#444444'),
-                pubOpen: createSafeMaterial(SPRITES.pubOpen, '#444444'),
-                barkeeper: createSafeMaterial(SPRITES.barkeeper, '#ffaaaa')
+                stand: createMat(SPRITES.stand, 2, 1),
+                runR: createMat(SPRITES.runR, 11, 1),
+                runL: createMat(SPRITES.runL, 11, 1),
+                pub: createMat(SPRITES.pub),
+                pubOpen: createMat(SPRITES.pubOpen),
+                barkeeper: createMat(SPRITES.barkeeper),
+                grass: createMat('https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/1.png')
             };
 
-            buildWorld();
+            loadTown();
             createPlayer();
 
-            window.addEventListener('keydown', e => { 
-                keys[e.code] = true;
+            window.onkeydown = e => { 
+                keys[e.code] = true; 
                 if(e.code === 'KeyE') handleInteraction();
-                if(e.code === 'Enter' || e.code === 'KeyJ') shoot();
-                if(e.code === 'Escape') toggleOptionsFromKey();
-                tryStartMenuMusic();
-            });
-            window.addEventListener('keyup', e => keys[e.code] = false);
-            window.addEventListener('resize', onResize);
-
+            };
+            window.onkeyup = e => keys[e.code] = false;
             animate();
         }
 
         function createPlayer() {
-            player = new THREE.Sprite(MATERIALS.playerStand);
-            player.scale.set(2.2, 2.2, 1);
-            player.position.set(townCenter, 5, 2);
-            player.userData = { 
-                vy: 0, onGround: false, facingRight: true,
-                currentAnim: 'stand', animFrame: 0, animTimer: 0,
-                helper: createBoxHelper(player, 0x22d3ee)
-            };
+            player = new THREE.Sprite(MATERIALS.stand);
+            player.scale.set(2, 2, 1);
+            player.position.set(0, 5, 2);
+            player.userData = { vy: 0, animFrame: 0, animTimer: 0, facingR: true };
             scene.add(player);
         }
 
-        function buildWorld() {
-            // Grass bottom line
-            for(let x = -200; x < 800; x += 2) {
-                const tile = new THREE.Sprite(MATERIALS.grass);
-                tile.scale.set(2, 2, 1);
-                tile.position.set(x, 0, 1);
-                scene.add(tile);
-            }
+        function clearScene() {
+            platforms.forEach(p => scene.remove(p));
+            npcs.forEach(n => scene.remove(n));
+            if(pubBuilding) scene.remove(pubBuilding);
+            platforms = []; npcs = []; pubBuilding = null;
+        }
+
+        function loadTown() {
+            clearScene();
+            currentZone = 'town';
+            scene.background = new THREE.Color(0x87CEEB);
             
-            // Core ground platform
-            addPlatform(300, 0, 1000, 2);
-
-            // Buildings
-            pubBuilding = new THREE.Sprite(MATERIALS.pub);
-            pubBuilding.position.set(townCenter - 25, 3.4, 0.5); 
-            pubBuilding.scale.set(5.06, 4.21, 1);
-            scene.add(pubBuilding);
-
-            // NPCs
-            spawnNPC(townCenter - 25, 2.2, 'barkeeper', { type: 'npc', name: 'Barkeeper', msg: 'Welcome to the Sprite Lounge.' });
-            spawnNPC(townCenter + 5, 2, 'shopkeeper', { type: 'shop', name: 'Merchant' });
-            spawnNPC(townCenter - 8, 2, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' });
-
-            // Wilds Generation
-            for(let i=0; i<150; i++) {
-                const x = (Math.random() * 1000) - 200;
-                if(Math.abs(x - townCenter) < 40) continue; 
-                const y = 3 + Math.random() * 7;
-                addPlatform(x, y, 3, 0.8);
-                if(Math.random() > 0.6) spawnEnemy(x, y + 1.1);
+            // Ground
+            addPlatform(0, 0, 100, 2);
+            for(let x=-20; x<20; x+=2) {
+                const g = new THREE.Sprite(MATERIALS.grass);
+                g.scale.set(2,2,1); g.position.set(x, 0, 1); scene.add(g);
             }
+
+            // Pub
+            pubBuilding = new THREE.Sprite(MATERIALS.pub);
+            pubBuilding.scale.set(5, 4, 1);
+            pubBuilding.position.set(-8, 3.2, 0.5);
+            scene.add(pubBuilding);
+            
+            document.getElementById('zone-display').innerText = "SpriteVille";
+        }
+
+        function loadPubInterior() {
+            clearScene();
+            currentZone = 'pub';
+            scene.background = new THREE.Color(0x221100);
+
+            // Floor
+            addPlatform(0, 0, 20, 2);
+            
+            // Barkeeper
+            const bk = new THREE.Sprite(MATERIALS.barkeeper);
+            bk.scale.set(2.5, 2.5, 1);
+            bk.position.set(4, 2.5, 1);
+            bk.userData = { type: 'barkeeper', name: 'The Barkeep' };
+            npcs.push(bk);
+            scene.add(bk);
+
+            // Exit Marker
+            const exit = new THREE.Sprite(createMat(SPRITES.pubOpen));
+            exit.scale.set(3, 3.5, 1);
+            exit.position.set(-7, 2.7, 0.1);
+            exit.userData = { type: 'exit' };
+            npcs.push(exit);
+            scene.add(exit);
+
+            document.getElementById('zone-display').innerText = "The Rusty Sprite Pub";
         }
 
         function addPlatform(x, y, w, h) {
-            const p = new THREE.Sprite(MATERIALS.brick);
-            p.scale.set(w, h, 1);
-            p.position.set(x, y, 1);
-            if (w < 100) scene.add(p);
-
-            const helper = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
-            helper.position.set(x, y, 1.1);
-            helper.visible = wireframeMode;
-            scene.add(helper);
-
-            platforms.push({ x, y, w, h, helper });
-        }
-
-        function spawnNPC(x, y, matKey, data) {
-            const npc = new THREE.Sprite(MATERIALS[matKey]);
-            npc.position.set(x, y, 1.5);
-            npc.scale.set(1.6, 1.6, 1);
-            npc.userData = { ...data, helper: createBoxHelper(npc, 0xffffff) };
-            npcs.push(npc);
-            scene.add(npc);
-        }
-
-        function spawnEnemy(x, y) {
-            const enemy = new THREE.Sprite(MATERIALS.enemy);
-            enemy.position.set(x, y, 2);
-            enemy.scale.set(1.2, 1.2, 1);
-            enemy.userData = { startX: x, range: 4, dir: 1, helper: createBoxHelper(enemy, 0xff0000) };
-            enemies.push(enemy);
-            scene.add(enemy);
+            const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({color: 0x443322, visible: false}));
+            p.position.set(x, y, 0);
+            platforms.push(p);
+            scene.add(p);
         }
 
         function handleInteraction() {
             if(isPaused) return;
-            npcs.forEach(npc => {
-                if(player.position.distanceTo(npc.position) < 2.5) {
-                    if(npc.userData.type === 'shop') {
-                        document.getElementById('shop-ui').style.display = 'block';
-                    } else {
-                        showMessage(npc.userData.msg);
-                    }
+
+            // Door check (Town -> Pub)
+            if(currentZone === 'town' && pubBuilding) {
+                const doorX = pubBuilding.position.x - 1.2;
+                if(Math.abs(player.position.x - doorX) < 1.5) {
+                    transitionZone('pub');
+                    return;
+                }
+            }
+
+            // NPC/Exit checks
+            npcs.forEach(n => {
+                if(player.position.distanceTo(n.position) < 2.5) {
+                    if(n.userData.type === 'barkeeper') openPubMenu();
+                    if(n.userData.type === 'exit') transitionZone('town');
                 }
             });
         }
 
-        function buyItem(id, price) {
+        function transitionZone(target) {
+            const ov = document.getElementById('transition-overlay');
+            ov.style.opacity = 1;
+            sfx.door();
+            setTimeout(() => {
+                if(target === 'pub') {
+                    loadPubInterior();
+                    player.position.set(-6, 5, 2);
+                } else {
+                    loadTown();
+                    player.position.set(-9.2, 5, 2);
+                }
+                ov.style.opacity = 0;
+            }, 500);
+        }
+
+        function openPubMenu() {
+            isPaused = true;
+            const ui = document.getElementById('shop-ui');
+            const container = document.getElementById('shop-items-container');
+            document.getElementById('shop-title').innerText = "Pub Menu";
+            ui.style.display = 'block';
+            
+            container.innerHTML = `
+                <div class="shop-item">
+                    <div>
+                        <p class="text-xl">Frosty Ale</p>
+                        <p class="text-xs text-gray-400">Restores spirits.</p>
+                    </div>
+                    <button class="buy-btn" onclick="buyBeer(5)">5 Gold</button>
+                </div>
+                <div class="shop-item">
+                    <div>
+                        <p class="text-xl">Cactus Juice</p>
+                        <p class="text-xs text-gray-400">Gets you through the desert.</p>
+                    </div>
+                    <button class="buy-btn" onclick="buyBeer(15)">15 Gold</button>
+                </div>
+            `;
+        }
+
+        function buyBeer(price) {
             if(stats.gold >= price) {
                 stats.gold -= price;
+                stats.beers++;
                 sfx.collect();
-                if(id === 'potion') stats.potions++;
-                if(id === 'boots') { stats.speedMult = 1.5; showMessage("Speed Increased!"); }
                 updateUI();
-            } else showMessage("Not enough gold!");
+                showMessage("Bought a drink!");
+            } else {
+                showMessage("Need more gold, friend!");
+            }
+        }
+
+        function closeInteractionUI() {
+            document.getElementById('shop-ui').style.display = 'none';
+            isPaused = false;
+        }
+
+        function showMessage(m) {
+            const d = document.createElement('div');
+            d.className = "fixed top-1/2 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-2 rounded-full z-[2000]";
+            d.innerText = m;
+            document.body.appendChild(d);
+            setTimeout(() => d.remove(), 2000);
         }
 
         function updateUI() {
             document.getElementById('gold-val').innerText = stats.gold;
-            document.getElementById('pot-val').innerText = stats.potions;
-            const dist = Math.abs(player.position.x - townCenter);
-            document.getElementById('zone-display').innerText = dist < townRadius ? "SpriteVille" : "The Wilds";
+            document.getElementById('beer-val').innerText = stats.beers;
         }
 
         function animate() {
@@ -542,120 +426,62 @@
             }
 
             // Movement
-            const speed = 0.15 * stats.speedMult;
-            let isMoving = false;
-            if(keys['KeyA'] || keys['ArrowLeft']) { player.position.x -= speed; player.userData.facingRight = false; isMoving = true; }
-            if(keys['KeyD'] || keys['ArrowRight']) { player.position.x += speed; player.userData.facingRight = true; isMoving = true; }
+            let moving = false;
+            const spd = 0.12;
+            if(keys['KeyA']) { player.position.x -= spd; player.userData.facingR = false; moving = true; }
+            if(keys['KeyD']) { player.position.x += spd; player.userData.facingR = true; moving = true; }
 
-            // Anim Logic
-            let targetAnim = isMoving ? (player.userData.facingRight ? 'runRight' : 'runLeft') : 'stand';
-            if (player.userData.currentAnim !== targetAnim) {
-                player.userData.currentAnim = targetAnim;
-                player.userData.animFrame = 0;
-                player.userData.animTimer = 0;
-                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')];
+            // Pub Door Visual Logic
+            if(currentZone === 'town' && pubBuilding) {
+                const doorX = pubBuilding.position.x - 1.2;
+                if(Math.abs(player.position.x - doorX) < 1.5) pubBuilding.material = MATERIALS.pubOpen;
+                else pubBuilding.material = MATERIALS.pub;
             }
-            if (targetAnim === 'stand') {
-                if (player.material.map) player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
+
+            // Animation
+            let anim = moving ? (player.userData.facingR ? 'runR' : 'runL') : 'stand';
+            player.material = MATERIALS[anim === 'stand' ? 'stand' : anim];
+            if(anim !== 'stand') {
+                if(++player.userData.animTimer > 6) { player.userData.animFrame = (player.userData.animFrame + 1) % 11; player.userData.animTimer = 0; }
+                player.material.map.offset.x = player.userData.animFrame / 11;
             } else {
-                if (++player.userData.animTimer > 5) { player.userData.animFrame = (player.userData.animFrame + 1) % 11; player.userData.animTimer = 0; }
-                if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
-            }
-
-            // Pub Door Logic
-            if (pubBuilding) {
-                // The door is roughly at the left side of the asset (Pub X - Width/4)
-                const doorPosX = pubBuilding.position.x - 1.2; 
-                const distToDoor = Math.abs(player.position.x - doorPosX);
-                if (distToDoor < 1.5) {
-                    pubBuilding.material = MATERIALS.pubOpen;
-                } else {
-                    pubBuilding.material = MATERIALS.pub;
-                }
+                player.material.map.offset.x = player.userData.facingR ? 0.5 : 0;
             }
 
             // Physics
-            player.userData.vy += GRAVITY;
+            player.userData.vy -= 0.015;
             player.position.y += player.userData.vy;
-            player.userData.onGround = false;
             platforms.forEach(p => {
-                if(Math.abs(player.position.x - p.x) < (p.w/2 + 0.6)) {
-                    const top = p.y + p.h/2;
-                    if(player.position.y - 1.1 <= top && player.position.y > p.y && player.userData.vy <= 0) {
-                        player.position.y = top + 1.1;
+                if(Math.abs(player.position.x - p.position.x) < 10) { // Simple floor check
+                    if(player.position.y < 2.1 && player.userData.vy <= 0) {
+                        player.position.y = 2.1;
                         player.userData.vy = 0;
-                        player.userData.onGround = true;
+                        if(keys['Space']) player.userData.vy = 0.3;
                     }
                 }
             });
-            if(keys['Space'] && player.userData.onGround) { player.userData.vy = JUMP_FORCE; sfx.jump(); }
 
-            // Cam follow
+            // Interaction Prompt
+            let near = false;
+            if(currentZone === 'town' && Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) near = true;
+            npcs.forEach(n => { if(player.position.distanceTo(n.position) < 2.5) near = true; });
+            document.getElementById('interaction-prompt').style.display = near ? 'block' : 'none';
+
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
-            camera.position.y += (Math.max(5, player.position.y + 1) - camera.position.y) * 0.05;
-            
-            updateUI();
-            
-            enemies.forEach(en => {
-                en.position.x += 0.04 * en.userData.dir;
-                if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
-                if(player.position.distanceTo(en.position) < 1.2) {
-                    if(stats.potions > 0) { stats.potions--; player.position.y += 2; sfx.damage(); showMessage("Used Potion!"); } 
-                    else gameOver();
-                }
-                if(en.userData.helper) { en.userData.helper.update(); en.userData.helper.visible = wireframeMode; }
-            });
-
-            projectiles.forEach((p, i) => {
-                p.position.x += p.userData.vx;
-                p.userData.helper.update(); p.userData.helper.visible = wireframeMode;
-                let hit = false;
-                enemies.forEach((en, ei) => {
-                    if (p.position.distanceTo(en.position) < 1) {
-                        scene.remove(en); if(en.userData.helper) scene.remove(en.userData.helper);
-                        enemies.splice(ei, 1);
-                        scene.remove(p); scene.remove(p.userData.helper);
-                        projectiles.splice(i, 1);
-                        stats.gold += 5; sfx.collect(); hit = true;
-                    }
-                });
-                if (!hit && Math.abs(p.position.x - player.position.x) > 15) {
-                    scene.remove(p); scene.remove(p.userData.helper);
-                    projectiles.splice(i, 1);
-                }
-            });
-
-            npcs.forEach(n => { if(n.userData.helper) { n.userData.helper.update(); n.userData.helper.visible = wireframeMode; }});
-            if(player.userData.helper) { player.userData.helper.update(); player.userData.helper.visible = wireframeMode; }
-
-            if(player.position.y < -10) gameOver();
             renderer.render(scene, camera);
         }
 
-        function shoot() {
-            if(!gameActive || isPaused || document.getElementById('shop-ui').style.display === 'block') return;
-            sfx.shoot();
-            const bullet = new THREE.Sprite(MATERIALS.bullet);
-            bullet.position.copy(player.position);
-            bullet.scale.set(0.6, 0.6, 1);
-            bullet.userData = { vx: player.userData.facingRight ? 0.4 : -0.4 };
-            bullet.userData.helper = createBoxHelper(bullet, 0xffff00);
-            projectiles.push(bullet);
-            scene.add(bullet);
+        function onNewGame() {
+            gameActive = true;
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-ui').classList.remove('hidden');
+            const g = document.getElementById('game-music');
+            g.volume = globalMusicVol; g.play();
+            document.getElementById('menu-music').pause();
+            updateUI();
         }
 
-        function toggleOptionsFromKey() { if (!gameActive) return; isPaused ? closeOptions() : openOptions(); }
-        function openOptions() { initAudio(); document.getElementById('options-overlay').style.display = 'flex'; if (gameActive) isPaused = true; }
-        function closeOptions() { document.getElementById('options-overlay').style.display = 'none'; if (gameActive) isPaused = false; }
-        function toggleMusic() { musicEnabled = !musicEnabled; document.getElementById('music-btn').innerText = musicEnabled ? "Music: ON" : "Music: OFF"; const currentMusic = gameActive ? document.getElementById('game-music') : document.getElementById('menu-music'); if (musicEnabled) currentMusic.play().catch(e => {}); else currentMusic.pause(); }
-        function toggleSfx() { sfxEnabled = !sfxEnabled; document.getElementById('sfx-btn').innerText = sfxEnabled ? "Sounds: ON" : "Sounds: OFF"; }
-        function onNewGame() { initAudio(); document.getElementById('menu-screen').style.display = 'none'; const introOverlay = document.getElementById('intro-overlay'); const introVideo = document.getElementById('intro-video'); introOverlay.style.display = 'flex'; introVideo.play().catch(e => { closeIntro(); }); introVideo.onended = () => { closeIntro(); }; }
-        function closeIntro() { document.getElementById('intro-video').pause(); document.getElementById('intro-overlay').style.display = 'none'; startGame(); }
-        function startGame() { gameActive = true; document.getElementById('menu-screen').style.display = 'none'; document.getElementById('game-ui').classList.remove('hidden'); switchMusicToGame(); }
-        function closeShop() { document.getElementById('shop-ui').style.display = 'none'; }
-        function gameOver() { gameActive = false; document.getElementById('game-music').pause(); alert("Captured by Magikarp! Gold lost: " + stats.gold); location.reload(); }
-        function showMessage(msg) { const b = document.createElement('div'); b.className = "fixed bottom-40 left-1/2 -translate-x-1/2 bg-yellow-400 p-3 rounded-xl z-[1000] text-black shadow-lg"; b.innerText = msg; document.body.appendChild(b); setTimeout(() => b.remove(), 3000); }
-        function onResize() { const aspect = window.innerWidth / window.innerHeight; camera.left = -VIEW_SIZE * aspect; camera.right = VIEW_SIZE * aspect; camera.top = VIEW_SIZE; camera.bottom = -VIEW_SIZE; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+        function openOptions() { alert("Volume controls etc."); }
 
         window.onload = init;
     </script>
