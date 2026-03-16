@@ -23,25 +23,22 @@
         }
 
         #menu-screen {
-            background: url('https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen.png');
-            background-color: #1e3a8a;
-            background-size: cover;
-            background-position: center;
+            background: #1e3a8a;
             z-index: 300;
             pointer-events: auto;
-            justify-content: flex-end;
-            padding-bottom: 8vh;
+            justify-content: center;
         }
 
         .menu-card {
             background: rgba(0, 0, 0, 0.7);
-            padding: 1rem 2rem;
+            padding: 2rem;
             border-radius: 50px;
             backdrop-filter: blur(12px);
             display: flex;
-            flex-direction: row;
-            gap: 2rem;
+            flex-direction: column;
+            gap: 1rem;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            align-items: center;
         }
 
         .menu-btn {
@@ -49,7 +46,7 @@
             background: transparent;
             border: none;
             color: white;
-            font-size: 1.5rem;
+            font-size: 2rem;
             text-transform: uppercase;
             cursor: pointer;
             transition: transform 0.2s;
@@ -69,7 +66,6 @@
             flex-direction: column; gap: 5px;
         }
 
-        /* Shop & Pub UI */
         .interaction-ui {
             position: fixed;
             top: 50%;
@@ -126,16 +122,6 @@
             display: none;
             z-index: 200;
         }
-        
-        #loading-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            z-index: 400;
-            font-size: 0.8rem;
-        }
     </style>
 </head>
 <body onclick="tryStartMenuMusic()">
@@ -149,24 +135,21 @@
 
     <div id="transition-overlay"></div>
 
-    <div id="loading-bar">Initializing Assets...</div>
-
     <div id="menu-screen" class="full-overlay">
+        <h1 class="text-6xl text-white mb-8 text-center" style="text-shadow: 4px 4px 0px #000;">DON PEYOTE</h1>
         <div class="menu-card">
-            <button onclick="onNewGame()" class="menu-btn">New Game</button>
-            <button onclick="openOptions()" class="menu-btn">Options</button>
+            <button onclick="onNewGame()" class="menu-btn">Play Game</button>
         </div>
     </div>
 
     <div id="game-ui" class="hidden">
         <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
-        <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Beers: <span id="beer-val">0</span></div>
-        <div class="text-sm opacity-80">WASD: Move | Space: Jump | E: Interact / Enter Pub</div>
+        <div id="stats" class="text-xl">Gold: <span id="gold-val">100</span> | Beers: <span id="beer-val">0</span></div>
+        <div class="text-sm opacity-80">WASD: Move | Space: Jump | E: Interact</div>
     </div>
 
-    <!-- Generic Shop/Pub UI -->
     <div id="shop-ui" class="interaction-ui">
-        <h2 id="shop-title" class="text-3xl text-yellow-500 mb-4 text-center">Town Shop</h2>
+        <h2 id="shop-title" class="text-3xl text-yellow-500 mb-4 text-center">Pub Menu</h2>
         <div id="shop-items-container"></div>
         <button class="mt-6 w-full py-2 bg-red-700 rounded-lg" onclick="closeInteractionUI()">Exit</button>
     </div>
@@ -174,17 +157,21 @@
     <div id="interaction-prompt">Press 'E'</div>
 
     <script>
-        // --- AUDIO ---
-        let audioCtx;
-        let globalMusicVol = 0.4;
-        let musicEnabled = true;
-        let sfxEnabled = true;
+        // SVG Data URL Assets for 100% reliability
+        const ASSETS = {
+            player: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+PHJlY3QgeD0iNDAiIHk9IjMwIiB3aWR0aD0iNDgiIGhlaWdodD0iODAiIGZpbGw9IiNmZjAwMDAiLz48cmVjdCB4PSI0NSIgeT0iNDAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSI3NSIgeT0iNDAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48L3N2Zz4=',
+            pub: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PHJlY3QgeD0iMjAiIHk9IjgwIiB3aWR0aD0iMjE2IiBoZWlnaHQ9IjE1NiIgZmlsbD0iIzRiMmYxZSIvPjxwYXRoIGQ9Ik0wIDEwMCBMMTI4IDAgTDI1NiAxMDAgWiIgZmlsbD0iIzI2MTQwZSIvPjxyZWN0IHg9IjEwMCIgeT0iMTYwIiB3aWR0aD0iNTYiIGhlaWdodD0iNzYiIGZpbGw9IiNhMDUyMmQiLz48L3N2Zz4=',
+            grass: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiMyMjhCMjIiLz48cGF0aCBkPSJNMTYgNjQgTDIwIDQ4IE0zMiA2NCBMMzIgMzIgTTQ4IDY0IEw0NCA0OCIgc3Ryb2tlPSIjM2NiMzc0IiBzdHJva2Utd2lkdGg9IjQiLz48L3N2Zz4=',
+            npc: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+PGNpcmNsZSBjeD0iNjQiIGN5PSI2NCIgcj0iNTAiIGZpbGw9IiNmZmRhNWIiLz48Y2lyY2xlIGN4PSI0NSIgY3k9IjUwIiByPSI1IiBmaWxsPSJibGFjayIvPjxjaXJjbGUgY3g9Ijg0IiBjeT0iNTAiIHI9IjUiIGZpbGw9ImJsYWNrIi8+PHJlY3QgeD0iNDQiIHk9Ijg1IiB3aWR0aD0iNDAiIGhlaWdodD0iNSIgZmlsbD0iYmxhY2siLz48L3N2Zz4='
+        };
+
+        let audioCtx, globalMusicVol = 0.4, gameActive = false, isPaused = false;
 
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         function tryStartMenuMusic() {
             initAudio();
             const m = document.getElementById('menu-music');
-            if (musicEnabled && m.paused && !gameActive) { m.volume = globalMusicVol; m.play().catch(()=>{}); }
+            if (m.paused && !gameActive) { m.volume = globalMusicVol; m.play().catch(()=>{}); }
         }
 
         const sfx = {
@@ -193,7 +180,7 @@
         };
 
         function playSfx(freq, type, duration, vol) {
-            if (!audioCtx || !sfxEnabled) return;
+            if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
@@ -206,80 +193,37 @@
             osc.stop(audioCtx.currentTime + duration);
         }
 
-        // --- GAME ENGINE ---
         let scene, camera, renderer, clock;
-        let player, platforms = [], npcs = [], items = [];
+        let player, platforms = [], npcs = [], pubBuilding = null;
         let keys = {};
-        let gameActive = false, isPaused = false;
-        let currentZone = 'town'; // 'town' or 'pub'
+        let currentZone = 'town';
         let stats = { gold: 100, beers: 0 };
         const VIEW_SIZE = 4.5;
+        const textureLoader = new THREE.TextureLoader();
 
-        // Better Texture Handling
-        const loadingManager = new THREE.LoadingManager();
-        loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
-            document.getElementById('loading-bar').innerText = `Loading Assets: ${Math.round(itemsLoaded / itemsTotal * 100)}%`;
-        };
-        loadingManager.onLoad = () => {
-            document.getElementById('loading-bar').style.display = 'none';
-        };
-        const textureLoader = new THREE.TextureLoader(loadingManager);
+        function createMat(dataUrl) {
+            const tex = textureLoader.load(dataUrl);
+            tex.magFilter = THREE.NearestFilter;
+            return new THREE.SpriteMaterial({ map: tex, transparent: true });
+        }
 
         let MATERIALS = {};
-        let pubBuilding = null;
-
-        const SPRITES = {
-            stand: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-standing-sprite-sheet-2x1-140Px140P.png',
-            runR: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-right-12fps.png',
-            runL: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-left-12fps.png',
-            pub: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/pub850x700.png',
-            pubOpen: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/pub-door-open-850x700.png',
-            barkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/other/official-artwork/113.png',
-            grass: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/1.png'
-        };
-
-        function createMat(url, tx=1, ty=1, fallbackColor = 0xffffff) {
-            const texture = textureLoader.load(url, 
-                (t) => {
-                    t.magFilter = THREE.NearestFilter;
-                    t.minFilter = THREE.NearestFilter;
-                    t.repeat.set(1/tx, 1/ty);
-                    t.needsUpdate = true;
-                },
-                undefined,
-                (err) => {
-                    console.error("Failed to load texture:", url);
-                }
-            );
-            
-            const m = new THREE.SpriteMaterial({ 
-                map: texture, 
-                color: fallbackColor,
-                transparent: true 
-            });
-            return m;
-        }
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
             const aspect = window.innerWidth / window.innerHeight;
             camera = new THREE.OrthographicCamera(-VIEW_SIZE * aspect, VIEW_SIZE * aspect, VIEW_SIZE, -VIEW_SIZE, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: false }); // Disable antialias for pixel art look
+            
+            renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
-            clock = new THREE.Clock();
-
-            // Setup Materials with Fallbacks
+            
             MATERIALS = {
-                stand: createMat(SPRITES.stand, 2, 1, 0xffffff),
-                runR: createMat(SPRITES.runR, 11, 1, 0xffffff),
-                runL: createMat(SPRITES.runL, 11, 1, 0xffffff),
-                pub: createMat(SPRITES.pub, 1, 1, 0x8b4513),
-                pubOpen: createMat(SPRITES.pubOpen, 1, 1, 0xa0522d),
-                barkeeper: createMat(SPRITES.barkeeper, 1, 1, 0xff00ff),
-                grass: createMat(SPRITES.grass, 1, 1, 0x228b22)
+                player: createMat(ASSETS.player),
+                pub: createMat(ASSETS.pub),
+                grass: createMat(ASSETS.grass),
+                npc: createMat(ASSETS.npc)
             };
 
             loadTown();
@@ -290,27 +234,22 @@
                 if(e.code === 'KeyE') handleInteraction();
             };
             window.onkeyup = e => keys[e.code] = false;
-            
-            window.addEventListener('resize', onWindowResize, false);
-            
+            window.onresize = () => {
+                const aspect = window.innerWidth / window.innerHeight;
+                camera.left = -VIEW_SIZE * aspect;
+                camera.right = VIEW_SIZE * aspect;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            };
+
             animate();
         }
 
-        function onWindowResize() {
-            const aspect = window.innerWidth / window.innerHeight;
-            camera.left = -VIEW_SIZE * aspect;
-            camera.right = VIEW_SIZE * aspect;
-            camera.top = VIEW_SIZE;
-            camera.bottom = -VIEW_SIZE;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
         function createPlayer() {
-            player = new THREE.Sprite(MATERIALS.stand);
-            player.scale.set(2, 2, 1);
+            player = new THREE.Sprite(MATERIALS.player);
+            player.scale.set(1.5, 1.5, 1);
             player.position.set(0, 5, 2);
-            player.userData = { vy: 0, animFrame: 0, animTimer: 0, facingR: true };
+            player.userData = { vy: 0, facingR: true };
             scene.add(player);
         }
 
@@ -326,17 +265,15 @@
             currentZone = 'town';
             scene.background = new THREE.Color(0x87CEEB);
             
-            // Ground
             addPlatform(0, 0, 100, 2);
             for(let x=-20; x<20; x+=2) {
                 const g = new THREE.Sprite(MATERIALS.grass);
-                g.scale.set(2,2,1); g.position.set(x, 0, 1); scene.add(g);
+                g.scale.set(2, 2, 1); g.position.set(x, 0, 1); scene.add(g);
             }
 
-            // Pub
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
-            pubBuilding.scale.set(5, 4, 1);
-            pubBuilding.position.set(-8, 3.2, 0.5);
+            pubBuilding.scale.set(5, 5, 1);
+            pubBuilding.position.set(-8, 3.5, 0.5);
             scene.add(pubBuilding);
             
             document.getElementById('zone-display').innerText = "SpriteVille";
@@ -345,23 +282,19 @@
         function loadPubInterior() {
             clearScene();
             currentZone = 'pub';
-            scene.background = new THREE.Color(0x221100);
-
-            // Floor
+            scene.background = new THREE.Color(0x1a0f00);
             addPlatform(0, 0, 20, 2);
             
-            // Barkeeper
-            const bk = new THREE.Sprite(MATERIALS.barkeeper);
-            bk.scale.set(2.5, 2.5, 1);
-            bk.position.set(4, 2.5, 1);
-            bk.userData = { type: 'barkeeper', name: 'The Barkeep' };
+            const bk = new THREE.Sprite(MATERIALS.npc);
+            bk.scale.set(2, 2, 1);
+            bk.position.set(4, 2, 1);
+            bk.userData = { type: 'barkeeper' };
             npcs.push(bk);
             scene.add(bk);
 
-            // Exit Marker
-            const exit = new THREE.Sprite(MATERIALS.pubOpen);
-            exit.scale.set(3, 3.5, 1);
-            exit.position.set(-7, 2.7, 0.1);
+            const exit = new THREE.Sprite(MATERIALS.pub);
+            exit.scale.set(3, 3, 1);
+            exit.position.set(-7, 2.5, 0.1);
             exit.userData = { type: 'exit' };
             npcs.push(exit);
             scene.add(exit);
@@ -370,27 +303,24 @@
         }
 
         function addPlatform(x, y, w, h) {
-            const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({color: 0x443322, visible: true}));
+            const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({color: 0x443322}));
             p.position.set(x, y, 0);
             platforms.push(p);
             scene.add(p);
         }
 
         function handleInteraction() {
-            if(isPaused) return;
+            if(isPaused || !gameActive) return;
 
-            // Door check (Town -> Pub)
             if(currentZone === 'town' && pubBuilding) {
-                const doorX = pubBuilding.position.x - 1.2;
-                if(Math.abs(player.position.x - doorX) < 1.5) {
+                if(Math.abs(player.position.x - pubBuilding.position.x) < 2) {
                     transitionZone('pub');
                     return;
                 }
             }
 
-            // NPC/Exit checks
             npcs.forEach(n => {
-                if(player.position.distanceTo(n.position) < 2.5) {
+                if(player.position.distanceTo(n.position) < 2) {
                     if(n.userData.type === 'barkeeper') openPubMenu();
                     if(n.userData.type === 'exit') transitionZone('town');
                 }
@@ -407,7 +337,7 @@
                     player.position.set(-6, 5, 2);
                 } else {
                     loadTown();
-                    player.position.set(-9.2, 5, 2);
+                    player.position.set(-8, 5, 2);
                 }
                 ov.style.opacity = 0;
             }, 500);
@@ -417,23 +347,11 @@
             isPaused = true;
             const ui = document.getElementById('shop-ui');
             const container = document.getElementById('shop-items-container');
-            document.getElementById('shop-title').innerText = "Pub Menu";
             ui.style.display = 'block';
-            
             container.innerHTML = `
                 <div class="shop-item">
-                    <div>
-                        <p class="text-xl">Frosty Ale</p>
-                        <p class="text-xs text-gray-400">Restores spirits.</p>
-                    </div>
+                    <div><p class="text-xl">Frosty Ale</p></div>
                     <button class="buy-btn" onclick="buyBeer(5)">5 Gold</button>
-                </div>
-                <div class="shop-item">
-                    <div>
-                        <p class="text-xl">Cactus Juice</p>
-                        <p class="text-xs text-gray-400">Gets you through the desert.</p>
-                    </div>
-                    <button class="buy-btn" onclick="buyBeer(15)">15 Gold</button>
                 </div>
             `;
         }
@@ -444,23 +362,12 @@
                 stats.beers++;
                 sfx.collect();
                 updateUI();
-                showMessage("Bought a drink!");
-            } else {
-                showMessage("Need more gold, friend!");
             }
         }
 
         function closeInteractionUI() {
             document.getElementById('shop-ui').style.display = 'none';
             isPaused = false;
-        }
-
-        function showMessage(m) {
-            const d = document.createElement('div');
-            d.className = "fixed top-1/2 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-2 rounded-full z-[2000]";
-            d.innerText = m;
-            document.body.appendChild(d);
-            setTimeout(() => d.remove(), 2000);
         }
 
         function updateUI() {
@@ -475,46 +382,22 @@
                 return;
             }
 
-            // Movement
-            let moving = false;
             const spd = 0.12;
-            if(keys['KeyA']) { player.position.x -= spd; player.userData.facingR = false; moving = true; }
-            if(keys['KeyD']) { player.position.x += spd; player.userData.facingR = true; moving = true; }
+            if(keys['KeyA']) player.position.x -= spd;
+            if(keys['KeyD']) player.position.x += spd;
 
-            // Pub Door Visual Logic
-            if(currentZone === 'town' && pubBuilding) {
-                const doorX = pubBuilding.position.x - 1.2;
-                if(Math.abs(player.position.x - doorX) < 1.5) pubBuilding.material = MATERIALS.pubOpen;
-                else pubBuilding.material = MATERIALS.pub;
-            }
-
-            // Animation
-            let anim = moving ? (player.userData.facingR ? 'runR' : 'runL') : 'stand';
-            player.material = MATERIALS[anim === 'stand' ? 'stand' : anim];
-            if(anim !== 'stand') {
-                if(++player.userData.animTimer > 6) { player.userData.animFrame = (player.userData.animFrame + 1) % 11; player.userData.animTimer = 0; }
-                if(player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
-            } else {
-                if(player.material.map) player.material.map.offset.x = player.userData.facingR ? 0.5 : 0;
-            }
-
-            // Physics
             player.userData.vy -= 0.015;
             player.position.y += player.userData.vy;
-            platforms.forEach(p => {
-                if(Math.abs(player.position.x - p.position.x) < 10) { 
-                    if(player.position.y < 2.1 && player.userData.vy <= 0) {
-                        player.position.y = 2.1;
-                        player.userData.vy = 0;
-                        if(keys['Space']) player.userData.vy = 0.3;
-                    }
-                }
-            });
 
-            // Interaction Prompt
+            if(player.position.y < 2.1) {
+                player.position.y = 2.1;
+                player.userData.vy = 0;
+                if(keys['Space']) player.userData.vy = 0.3;
+            }
+
             let near = false;
-            if(currentZone === 'town' && pubBuilding && Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) near = true;
-            npcs.forEach(n => { if(player.position.distanceTo(n.position) < 2.5) near = true; });
+            if(currentZone === 'town' && Math.abs(player.position.x - pubBuilding.position.x) < 2) near = true;
+            npcs.forEach(n => { if(player.position.distanceTo(n.position) < 2) near = true; });
             document.getElementById('interaction-prompt').style.display = near ? 'block' : 'none';
 
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
@@ -525,13 +408,9 @@
             gameActive = true;
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('game-ui').classList.remove('hidden');
-            const g = document.getElementById('game-music');
-            g.volume = globalMusicVol; g.play();
+            document.getElementById('game-music').play();
             document.getElementById('menu-music').pause();
-            updateUI();
         }
-
-        function openOptions() { alert("Volume controls etc."); }
 
         window.onload = init;
     </script>
