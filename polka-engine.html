@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - Biome Transitions</title>
+    <title>2D Sprite Open World - Optimized Backgrounds</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Luckiest Guy', cursive; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'Luckiest Guy', cursive; }
         canvas { display: block; }
         
         .full-overlay {
@@ -23,7 +23,7 @@
         }
 
         #menu-screen {
-            background: url('https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen.png');
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen.png');
             background-color: #1e3a8a;
             background-size: cover;
             background-position: center;
@@ -74,8 +74,6 @@
             flex-direction: column;
             gap: 1rem;
             min-width: 380px;
-            max-height: 90vh;
-            overflow-y: auto;
         }
 
         #game-ui {
@@ -102,15 +100,6 @@
             display: none;
             z-index: 500;
             pointer-events: auto;
-            min-width: 300px;
-        }
-
-        .shop-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #333;
         }
 
         .buy-btn {
@@ -119,8 +108,6 @@
             border-radius: 5px;
             cursor: pointer;
         }
-
-        .buy-btn:hover { background: #22c55e; }
 
         #intro-overlay {
             background: black;
@@ -144,42 +131,19 @@
             transition: opacity 0.5s;
             z-index: 1000;
         }
-
-        .volume-slider {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 10px;
-            background: #334155;
-            outline: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #22d3ee;
-            border-radius: 50%;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body onclick="tryStartMenuMusic()">
 
-    <audio id="menu-music" loop>
-        <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-theme.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="game-music" loop>
-        <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/Whispers_of_the_Verdant_Keep.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="menu-music" loop><source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-theme.mp3" type="audio/mpeg"></audio>
+    <audio id="game-music" loop><source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/Whispers_of_the_Verdant_Keep.mp3" type="audio/mpeg"></audio>
 
     <div id="fade-overlay"></div>
 
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
             <button onclick="onNewGame()" class="menu-btn">New Game</button>
-            <button onclick="showMessage('Save disabled in Demo')" class="menu-btn">Load Game</button>
+            <button onclick="showMessage('Demo Mode Only')" class="menu-btn">Load</button>
             <button onclick="openOptions()" class="menu-btn">Options</button>
         </div>
     </div>
@@ -188,19 +152,9 @@
         <div class="options-panel">
             <h2 class="text-4xl text-cyan-400 text-center mb-2">Settings</h2>
             <button onclick="toggleMusic()" id="music-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Music: ON</button>
-            <div class="flex flex-col gap-1 px-4">
-                <label class="text-white text-sm flex justify-between">
-                    <span>Music Volume</span>
-                    <span id="vol-label">40%</span>
-                </label>
-                <input type="range" min="0" max="100" value="40" class="volume-slider" id="music-vol" oninput="updateVolume(this.value)">
-            </div>
             <button onclick="toggleSfx()" id="sfx-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Sounds: ON</button>
-            <div class="mt-4 pt-4 border-t border-cyan-800/50">
-                <h3 class="text-xl text-yellow-400 text-center mb-3">Debug Menu</h3>
-                <button onclick="toggleWireframe()" id="wireframe-btn" class="w-full py-2 bg-yellow-900/30 border border-yellow-500/50 rounded-lg text-white text-lg">Wireframe Mode: OFF</button>
-            </div>
-            <button onclick="closeOptions()" class="mt-4 p-3 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-colors">Close</button>
+            <button onclick="toggleWireframe()" id="wireframe-btn" class="w-full py-2 bg-yellow-900/30 border border-yellow-500/50 rounded-lg text-white">Wireframe: OFF</button>
+            <button onclick="closeOptions()" class="mt-4 p-3 bg-red-600/80 text-white rounded-xl">Close</button>
         </div>
     </div>
 
@@ -213,41 +167,28 @@
     <div id="game-ui" class="hidden">
         <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
         <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Potions: <span id="pot-val">0</span></div>
-        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter: Shoot | E: Interact</div>
     </div>
 
     <div id="shop-ui">
         <h2 class="text-2xl text-yellow-400 mb-4 text-center">Town Shop</h2>
-        <div class="shop-item"><span>Health Potion</span><button class="buy-btn" onclick="buyItem('potion', 10)">10 Gold</button></div>
-        <div class="shop-item"><span>Speed Boots</span><button class="buy-btn" onclick="buyItem('boots', 50)">50 Gold</button></div>
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-center"><span>Health Potion</span><button class="buy-btn" onclick="buyItem('potion', 10)">10G</button></div>
+            <div class="flex justify-between items-center"><span>Speed Boots</span><button class="buy-btn" onclick="buyItem('boots', 50)">50G</button></div>
+        </div>
         <button class="mt-4 w-full text-red-400" onclick="closeShop()">Close</button>
     </div>
 
     <script>
-        // --- AUDIO ENGINE ---
-        let audioCtx;
-        let menuMusicStarted = false, gameMusicStarted = false;
-        let globalMusicVol = 0.4, musicEnabled = true, sfxEnabled = true;
-
-        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-        function updateVolume(v) { globalMusicVol = v/100; document.getElementById('vol-label').innerText = v + "%"; const m = document.getElementById('menu-music'), g = document.getElementById('game-music'); m.volume = globalMusicVol; g.volume = globalMusicVol; }
-        function tryStartMenuMusic() { initAudio(); if (musicEnabled && !menuMusicStarted && !gameActive) { const m = document.getElementById('menu-music'); m.volume = globalMusicVol; m.play().then(() => menuMusicStarted = true).catch(() => {}); } }
-        function switchMusicToGame() { document.getElementById('menu-music').pause(); menuMusicStarted = false; if (musicEnabled) { const g = document.getElementById('game-music'); g.volume = globalMusicVol; g.play().then(() => gameMusicStarted = true).catch(() => {}); } }
-        function playSound(f, t, d, v) { if (!audioCtx || !sfxEnabled) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime); g.gain.setValueAtTime(v, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + d); }
-        const sfx = { jump: () => playSound(400, 'square', 0.1, 0.1), shoot: () => playSound(150, 'sawtooth', 0.1, 0.05), collect: () => playSound(800, 'sine', 0.2, 0.1), door: () => playSound(200, 'triangle', 0.4, 0.1), damage: () => playSound(100, 'sawtooth', 0.3, 0.2) };
-
-        // --- GAME ENGINE ---
+        // --- CORE STATE ---
         let scene, camera, renderer, clock;
         let player, interactSprite, bgLayers = {}, enemies = [], platforms = [], npcs = [], projectiles = [];
         let keys = {};
-        let gameActive = false, isPaused = false, wireframeMode = false;
-        let isInside = false; 
+        let gameActive = false, isPaused = false, wireframeMode = false, isInside = false;
         let stats = { gold: 0, potions: 0, speedMult: 1 };
         
         const VIEW_SIZE = 4.2;
-        const textureLoader = new THREE.TextureLoader();
-        const townCenter = 0;
         const BIOME_RANGE = 50; 
+        const townCenter = 0;
         
         let worldGroup, interiorGroup; 
         let pubBuilding = null;
@@ -265,69 +206,59 @@
             bullet: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/items/poke-ball.png',
             pub: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/pub850x700.png',
             pubOpen: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/pub-door-open-850x700.png',
-            barkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/113.png',
             bgTown: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/townbg-1-grok.jpg',
             bgForestLeft: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/forestbg-1-grok.jpg',
             bgForestRight: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/forestbg-2-grok.jpg'
         };
 
-        const GRAVITY = -0.015, JUMP_FORCE = 0.32;
-
-        function createSolidTexture(color) {
-            const c = document.createElement('canvas'); c.width = 16; c.height = 16;
-            const ctx = c.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0,0,16,16);
-            const tex = new THREE.CanvasTexture(c); tex.magFilter = THREE.NearestFilter; return tex;
-        }
-
-        function createExclamationTexture() {
-            const c = document.createElement('canvas'); c.width = 64; c.height = 64;
-            const ctx = c.getContext('2d');
-            ctx.fillStyle = '#facc15';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.arc(32, 32, 28, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#000';
-            ctx.fillRect(28, 12, 8, 24);
-            ctx.fillRect(28, 42, 8, 8);
-            const tex = new THREE.CanvasTexture(c); tex.magFilter = THREE.NearestFilter; return tex;
-        }
-
-        function createSafeMaterial(url, fallback, tilesX = 1, tilesY = 1) {
-            const mat = new THREE.SpriteMaterial({ map: createSolidTexture(fallback), transparent: true });
-            textureLoader.load(url, (t) => { 
-                t.magFilter = THREE.NearestFilter; 
-                if (tilesX > 1 || tilesY > 1) t.repeat.set(1 / tilesX, 1 / tilesY);
-                mat.map = t; mat.needsUpdate = true; 
-            });
-            return mat;
-        }
+        const textureLoader = new THREE.TextureLoader();
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a1a);
+            scene.background = new THREE.Color(0x05050a);
             const aspect = window.innerWidth / window.innerHeight;
             camera = new THREE.OrthographicCamera(-VIEW_SIZE * aspect, VIEW_SIZE * aspect, VIEW_SIZE, -VIEW_SIZE, 0.1, 1000);
             camera.position.set(0, 5, 20);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
+            
             scene.add(new THREE.AmbientLight(0xffffff, 1.2));
             clock = new THREE.Clock();
 
+            // Load Materials
+            const createMat = (url, tilesX = 1) => {
+                const mat = new THREE.SpriteMaterial({ map: null, transparent: true });
+                textureLoader.load(url, (t) => {
+                    t.magFilter = THREE.NearestFilter;
+                    if (tilesX > 1) t.repeat.set(1 / tilesX, 1);
+                    mat.map = t; mat.needsUpdate = true;
+                });
+                return mat;
+            };
+
             MATERIALS = {
-                playerStand: createSafeMaterial(SPRITES.playerStand, '#ffff00', 2, 1),
-                playerRunLeft: createSafeMaterial(SPRITES.playerRunLeft, '#ffff00', 11, 1),
-                playerRunRight: createSafeMaterial(SPRITES.playerRunRight, '#ffff00', 11, 1),
-                enemy: createSafeMaterial(SPRITES.enemy, '#ff0000'),
-                npc: createSafeMaterial(SPRITES.npc, '#ffffff'),
-                shopkeeper: createSafeMaterial(SPRITES.shopkeeper, '#ff00ff'),
-                grass: createSafeMaterial(SPRITES.grass, '#2d5a27'),
-                brick: createSafeMaterial(SPRITES.brick, '#8b4513'),
-                bullet: createSafeMaterial(SPRITES.bullet, '#ffffff'),
-                pub: createSafeMaterial(SPRITES.pub, '#444444'),
-                pubOpen: createSafeMaterial(SPRITES.pubOpen, '#444444'),
-                barkeeper: createSafeMaterial(SPRITES.barkeeper, '#ffaaaa'),
-                exclamation: new THREE.SpriteMaterial({ map: createExclamationTexture(), transparent: true })
+                playerStand: createMat(SPRITES.playerStand, 2),
+                playerRunLeft: createMat(SPRITES.playerRunLeft, 11),
+                playerRunRight: createMat(SPRITES.playerRunRight, 11),
+                enemy: createMat(SPRITES.enemy),
+                npc: createMat(SPRITES.npc),
+                shopkeeper: createMat(SPRITES.shopkeeper),
+                grass: createMat(SPRITES.grass),
+                brick: createMat(SPRITES.brick),
+                bullet: createMat(SPRITES.bullet),
+                pub: createMat(SPRITES.pub),
+                pubOpen: createMat(SPRITES.pubOpen),
+                exclamation: new THREE.SpriteMaterial({ 
+                    map: (function(){
+                        const c = document.createElement('canvas'); c.width=64; c.height=64;
+                        const ctx = c.getContext('2d'); ctx.fillStyle='#facc15'; ctx.beginPath(); ctx.arc(32,32,25,0,Math.PI*2); ctx.fill();
+                        ctx.fillStyle='#000'; ctx.fillRect(29,15,6,20); ctx.fillRect(29,40,6,6);
+                        return new THREE.CanvasTexture(c);
+                    })(), 
+                    transparent: true 
+                })
             };
 
             worldGroup = new THREE.Group();
@@ -336,7 +267,7 @@
             scene.add(worldGroup);
             scene.add(interiorGroup);
 
-            buildBiomeBackgrounds();
+            buildBackgrounds();
             buildWorld();
             buildInterior();
             createPlayer();
@@ -344,39 +275,37 @@
             window.addEventListener('keydown', e => { 
                 keys[e.code] = true;
                 if(e.code === 'KeyE') handleInteraction();
-                if(e.code === 'Enter' || e.code === 'KeyJ') shoot();
-                if(e.code === 'Escape') toggleOptionsFromKey();
-                tryStartMenuMusic();
+                if(e.code === 'Enter') shoot();
             });
             window.addEventListener('keyup', e => keys[e.code] = false);
             window.addEventListener('resize', onResize);
             animate();
         }
 
-        function buildBiomeBackgrounds() {
-            const h = 10; // Scaled down height
+        function buildBackgrounds() {
+            // REDUCED SIZE: Height 5 instead of 10 (50% smaller)
+            const h = 5.2; 
             const w = h * (16/9);
 
-            const biomes = [
-                { id: 'town', url: SPRITES.bgTown, z: -5 },
-                { id: 'forestLeft', url: SPRITES.bgForestLeft, z: -5.1 },
-                { id: 'forestRight', url: SPRITES.bgForestRight, z: -5.1 }
+            const configs = [
+                { id: 'town', url: SPRITES.bgTown, z: -4 },
+                { id: 'forestLeft', url: SPRITES.bgForestLeft, z: -4.1 },
+                { id: 'forestRight', url: SPRITES.bgForestRight, z: -4.1 }
             ];
 
-            biomes.forEach(biome => {
+            configs.forEach(conf => {
                 const group = new THREE.Group();
-                textureLoader.load(biome.url, (tex) => {
+                textureLoader.load(conf.url, (tex) => {
                     tex.magFilter = THREE.LinearFilter;
-                    // Tiles to cover world
-                    for (let i = -10; i <= 20; i++) {
-                        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: biome.id === 'town' ? 1 : 0 });
-                        const geom = new THREE.PlaneGeometry(w, h);
-                        const plane = new THREE.Mesh(geom, mat);
-                        plane.position.set(i * w, 5, biome.z);
+                    // Tiles to cover 1000+ units of world
+                    for (let i = -10; i <= 25; i++) {
+                        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: conf.id === 'town' ? 1 : 0 });
+                        const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+                        plane.position.set(i * w, 3.8, conf.z); // Fixed height near gameplay floor
                         group.add(plane);
                     }
                 });
-                bgLayers[biome.id] = group;
+                bgLayers[conf.id] = group;
                 worldGroup.add(group);
             });
         }
@@ -385,7 +314,7 @@
             player = new THREE.Sprite(MATERIALS.playerStand);
             player.scale.set(2.2, 2.2, 1);
             player.position.set(townCenter, 5, 2);
-            player.userData = { vy: 0, onGround: false, facingRight: true, currentAnim: 'stand', animFrame: 0, animTimer: 0, isRespawning: false, helper: createBoxHelper(player, 0x22d3ee) };
+            player.userData = { vy: 0, onGround: false, facingRight: true, currentAnim: 'stand', animFrame: 0, animTimer: 0 };
             scene.add(player);
 
             interactSprite = new THREE.Sprite(MATERIALS.exclamation);
@@ -395,28 +324,30 @@
         }
 
         function buildWorld() {
+            // Floor
             for(let x = -400; x < 1000; x += 2) {
                 const tile = new THREE.Sprite(MATERIALS.grass);
-                tile.scale.set(2, 2, 1);
-                tile.position.set(x, 0, 1);
+                tile.scale.set(2, 2, 1); tile.position.set(x, 0, 1);
                 worldGroup.add(tile);
             }
-            addPlatform(300, 0, 2000, 2, worldGroup);
-            
+            platforms.push({ x: 300, y: 0, w: 2000, h: 2, group: worldGroup });
+
+            // Town Center
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
             pubBuilding.position.set(townCenter - 25, 3.4, 0.5); 
             pubBuilding.scale.set(5.06, 4.21, 1);
             worldGroup.add(pubBuilding);
 
-            spawnNPC(townCenter + 5, 2, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
-            spawnNPC(townCenter - 8, 2, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
+            spawnNPC(townCenter + 5, 2, 'shopkeeper', { type: 'shop' }, worldGroup);
+            spawnNPC(townCenter - 8, 2, 'npc', { type: 'npc', msg: 'The world is big beyond the forest!' }, worldGroup);
 
+            // Level Gen
             for(let i=0; i<300; i++) {
                 const x = (Math.random() * 1400) - 400;
                 if(Math.abs(x - townCenter) < 40) continue; 
                 const y = 3 + Math.random() * 7;
                 addPlatform(x, y, 3, 0.8, worldGroup);
-                if(Math.random() > 0.6) spawnEnemy(x, y + 1.1);
+                if(Math.random() > 0.7) spawnEnemy(x, y + 1.1);
             }
         }
 
@@ -424,284 +355,190 @@
             addPlatform(0, 0, 20, 2, interiorGroup); 
             addPlatform(-10.5, 5, 1, 12, interiorGroup); 
             addPlatform(10.5, 5, 1, 12, interiorGroup); 
-            addPlatform(0, 11, 22, 1, interiorGroup); 
-            spawnNPC(4, 2, 'barkeeper', { type: 'npc', name: 'Joe', msg: 'The usual, Don?' }, interiorGroup);
-            const exitSign = new THREE.Sprite(MATERIALS.pubOpen);
-            exitSign.scale.set(4, 4, 1);
-            exitSign.position.set(-8, 3.1, 0.5);
-            interiorGroup.add(exitSign);
+            spawnNPC(4, 2, 'npc', { type: 'npc', msg: 'Quiet night at the pub.' }, interiorGroup);
         }
 
         function addPlatform(x, y, w, h, group) {
             const p = new THREE.Sprite(MATERIALS.brick);
-            p.scale.set(w, h, 1);
-            p.position.set(x, y, 1);
-            if (w < 100) group.add(p);
-            const helper = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
-            helper.position.set(x, y, 1.1);
-            helper.visible = wireframeMode;
-            group.add(helper);
-            platforms.push({ x, y, w, h, helper, group });
+            p.scale.set(w, h, 1); p.position.set(x, y, 1);
+            group.add(p);
+            platforms.push({ x, y, w, h, group });
         }
 
         function spawnNPC(x, y, matKey, data, group) {
             const npc = new THREE.Sprite(MATERIALS[matKey]);
-            npc.position.set(x, y, 1.5);
-            npc.scale.set(1.6, 1.6, 1);
-            npc.userData = { ...data, helper: createBoxHelper(npc, 0xffffff) };
+            npc.position.set(x, y, 1.5); npc.scale.set(1.6, 1.6, 1);
+            npc.userData = data;
             npcs.push({ sprite: npc, group });
             group.add(npc);
         }
 
         function spawnEnemy(x, y) {
             const enemy = new THREE.Sprite(MATERIALS.enemy);
-            enemy.position.set(x, y, 2);
-            enemy.scale.set(1.2, 1.2, 1);
-            enemy.userData = { startX: x, range: 4, dir: 1, helper: createBoxHelper(enemy, 0xff0000) };
+            enemy.position.set(x, y, 2); enemy.scale.set(1.2, 1.2, 1);
+            enemy.userData = { startX: x, range: 4, dir: 1 };
             enemies.push(enemy);
             worldGroup.add(enemy);
         }
 
-        function handleInteraction() {
-            if(isPaused || player.userData.isRespawning) return;
-            
-            if (!isInside && pubBuilding) {
-                const doorPosX = pubBuilding.position.x - 1.2; 
-                if (Math.abs(player.position.x - doorPosX) < 1.5) {
-                    transitionScene(true);
-                    return;
-                }
+        function animate() {
+            requestAnimationFrame(animate);
+            if(!gameActive || isPaused) return;
+
+            const dt = clock.getDelta();
+            const speed = 0.15 * stats.speedMult;
+            let isMoving = false;
+
+            if(keys['KeyA'] || keys['ArrowLeft']) { player.position.x -= speed; player.userData.facingRight = false; isMoving = true; }
+            if(keys['KeyD'] || keys['ArrowRight']) { player.position.x += speed; player.userData.facingRight = true; isMoving = true; }
+
+            // Anim State
+            let targetAnim = isMoving ? (player.userData.facingRight ? 'runRight' : 'runLeft') : 'stand';
+            if (player.userData.currentAnim !== targetAnim) {
+                player.userData.currentAnim = targetAnim;
+                player.userData.animFrame = 0;
+                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')];
+            }
+            if (targetAnim !== 'stand') {
+                if (++player.userData.animTimer > 5) { player.userData.animFrame = (player.userData.animFrame + 1) % 11; player.userData.animTimer = 0; }
+                if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
+            } else {
+                if (player.material.map) player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
             }
 
-            if (isInside && Math.abs(player.position.x - (-8)) < 1.5) {
-                transitionScene(false);
-                return;
+            // Physics
+            player.userData.vy -= 0.015;
+            player.position.y += player.userData.vy;
+            player.userData.onGround = false;
+
+            platforms.forEach(p => {
+                if(!p.group.visible) return;
+                if(Math.abs(player.position.x - p.x) < (p.w/2 + 0.6)) {
+                    const top = p.y + p.h/2;
+                    if(player.position.y - 1.1 <= top && player.position.y > p.y && player.userData.vy <= 0) {
+                        player.position.y = top + 1.1; player.userData.vy = 0; player.userData.onGround = true;
+                    }
+                }
+            });
+
+            if(keys['Space'] && player.userData.onGround) { player.userData.vy = 0.32; }
+
+            // Camera & Parallax
+            camera.position.x += (player.position.x - camera.position.x) * 0.1;
+            camera.position.y += (Math.max(4, player.position.y + 1) - camera.position.y) * 0.05;
+
+            // Update Biomes & Backgrounds
+            if (!isInside) {
+                const px = player.position.x;
+                let tOp = 1, flOp = 0, frOp = 0;
+                if (px < -BIOME_RANGE) { flOp = Math.min(1, Math.abs(px + BIOME_RANGE)/20); tOp = 1 - flOp; }
+                else if (px > BIOME_RANGE) { frOp = Math.min(1, (px - BIOME_RANGE)/20); tOp = 1 - frOp; }
+
+                Object.keys(bgLayers).forEach(k => {
+                    const layer = bgLayers[k];
+                    const target = (k === 'town' ? tOp : (k === 'forestLeft' ? flOp : frOp));
+                    layer.children.forEach(m => {
+                        m.material.opacity = THREE.MathUtils.lerp(m.material.opacity, target, 0.05);
+                        // FIXED VERTICAL: Height logic to keep backgrounds relative to world floor
+                        m.position.y = 3.8 + (camera.position.y - 5) * 0.2; 
+                        // Horizontal Parallax (Very slight to keep world feeling connected)
+                        if (!m.userData.startX) m.userData.startX = m.position.x;
+                        m.position.x = m.userData.startX + (camera.position.x * 0.85);
+                    });
+                });
+            }
+
+            // NPC Interaction Check
+            let interacting = false;
+            npcs.forEach(n => {
+                if(n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) interacting = true;
+            });
+            if(!isInside && Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) interacting = true;
+            else if(isInside && Math.abs(player.position.x - (-8)) < 2) interacting = true;
+
+            interactSprite.visible = interacting;
+            if(interacting) interactSprite.position.set(player.position.x, player.position.y + 1.6, 3);
+
+            // Enemies
+            if(!isInside) {
+                enemies.forEach(en => {
+                    en.position.x += 0.04 * en.userData.dir;
+                    if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
+                    if(player.position.distanceTo(en.position) < 1.2) triggerRespawn();
+                });
+            }
+
+            if(player.position.y < -10) triggerRespawn();
+            
+            updateUI();
+            renderer.render(scene, camera);
+        }
+
+        function handleInteraction() {
+            if(isPaused) return;
+            if (!isInside && Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) {
+                transition(true);
+            } else if (isInside && Math.abs(player.position.x - (-8)) < 2) {
+                transition(false);
             }
 
             npcs.forEach(n => {
-                if (n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) {
+                if(n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) {
                     if(n.sprite.userData.type === 'shop') document.getElementById('shop-ui').style.display = 'block';
                     else showMessage(n.sprite.userData.msg);
                 }
             });
         }
 
-        function transitionScene(entering) {
+        function transition(toInside) {
             const fade = document.getElementById('fade-overlay');
             fade.style.opacity = '1';
-            sfx.door();
             setTimeout(() => {
-                isInside = entering;
-                worldGroup.visible = !entering;
-                interiorGroup.visible = entering;
-                
-                if (entering) {
-                    player.position.set(-6, 2, 2);
-                } else {
-                    player.position.set(pubBuilding.position.x - 1.2, 2, 2);
-                }
-                
+                isInside = toInside;
+                worldGroup.visible = !toInside;
+                interiorGroup.visible = toInside;
+                player.position.set(toInside ? -6 : pubBuilding.position.x - 1.2, 2, 2);
                 fade.style.opacity = '0';
-                updateUI();
             }, 500);
         }
 
         function triggerRespawn() {
-            if (player.userData.isRespawning) return;
-            player.userData.isRespawning = true;
-            sfx.damage();
-            
             const fade = document.getElementById('fade-overlay');
             fade.style.opacity = '1';
-            
-            const penalty = Math.floor(stats.gold * 0.2);
-            stats.gold -= penalty;
-            showMessage(`Defeated! Lost ${penalty} Gold. Waking up in Town...`);
-
             setTimeout(() => {
-                isInside = false;
-                worldGroup.visible = true;
-                interiorGroup.visible = false;
-                
-                player.position.set(townCenter, 5, 2);
-                player.userData.vy = 0;
-                player.userData.isRespawning = false;
-                
+                isInside = false; worldGroup.visible = true; interiorGroup.visible = false;
+                player.position.set(townCenter, 5, 2); player.userData.vy = 0;
                 fade.style.opacity = '0';
-                updateUI();
             }, 1000);
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            if(!gameActive || isPaused) { renderer.render(scene, camera); return; }
-            if(player.userData.isRespawning) { renderer.render(scene, camera); return; }
-
-            const speed = 0.15 * stats.speedMult;
-            let isMoving = false;
-            if(keys['KeyA'] || keys['ArrowLeft']) { player.position.x -= speed; player.userData.facingRight = false; isMoving = true; }
-            if(keys['KeyD'] || keys['ArrowRight']) { player.position.x += speed; player.userData.facingRight = true; isMoving = true; }
-
-            // Animation Logic
-            let targetAnim = isMoving ? (player.userData.facingRight ? 'runRight' : 'runLeft') : 'stand';
-            if (player.userData.currentAnim !== targetAnim) {
-                player.userData.currentAnim = targetAnim;
-                player.userData.animFrame = 0;
-                player.userData.animTimer = 0;
-                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')];
-            }
-            if (targetAnim === 'stand') {
-                if (player.material.map) player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
-            } else {
-                if (++player.userData.animTimer > 5) { player.userData.animFrame = (player.userData.animFrame + 1) % 11; player.userData.animTimer = 0; }
-                if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
-            }
-
-            // --- REFINED BIOME TRANSITION & PARALLAX ---
-            if (!isInside) {
-                const px = player.position.x;
-                let townOpacity = 1;
-                let leftForestOpacity = 0;
-                let rightForestOpacity = 0;
-
-                // Thresholds for fading
-                if (px < -BIOME_RANGE) {
-                    const factor = Math.min(1, Math.abs(px + BIOME_RANGE) / 15);
-                    townOpacity = 1 - factor;
-                    leftForestOpacity = factor;
-                } else if (px > BIOME_RANGE) {
-                    const factor = Math.min(1, (px - BIOME_RANGE) / 15);
-                    townOpacity = 1 - factor;
-                    rightForestOpacity = factor;
-                }
-
-                // Parallax and Opacity updates
-                Object.keys(bgLayers).forEach(key => {
-                    const layer = bgLayers[key];
-                    const targetOpacity = key === 'town' ? townOpacity : (key === 'forestLeft' ? leftForestOpacity : rightForestOpacity);
-                    
-                    layer.children.forEach(mesh => {
-                        // Fade
-                        mesh.material.opacity = THREE.MathUtils.lerp(mesh.material.opacity, targetOpacity, 0.05);
-                        
-                        // Vertical parallax (follow camera)
-                        mesh.position.y = camera.position.y;
-                        
-                        // Horizontal Parallax
-                        if (!mesh.userData.startX) mesh.userData.startX = mesh.position.x;
-                        mesh.position.x = mesh.userData.startX + (camera.position.x * 0.9);
-                    });
-                });
-            }
-
-            // Interaction Trigger Visual
-            let foundInteraction = false;
-            if (!isInside && pubBuilding) {
-                const doorPosX = pubBuilding.position.x - 1.2;
-                const distToDoor = Math.abs(player.position.x - doorPosX);
-                pubBuilding.material = distToDoor < 1.5 ? MATERIALS.pubOpen : MATERIALS.pub;
-                if (distToDoor < 1.5) foundInteraction = true; 
-            } else if (isInside) {
-                if (Math.abs(player.position.x - (-8)) < 1.5) foundInteraction = true; 
-            }
-
-            if (!foundInteraction) {
-                npcs.forEach(n => {
-                    if (n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) {
-                        foundInteraction = true;
-                    }
-                });
-            }
-
-            interactSprite.visible = foundInteraction;
-            if (foundInteraction) interactSprite.position.set(player.position.x, player.position.y + 1.6 + Math.sin(Date.now() * 0.01) * 0.1, 3);
-
-            // Physics
-            player.userData.vy += GRAVITY;
-            player.position.y += player.userData.vy;
-            player.userData.onGround = false;
-            platforms.forEach(p => {
-                if(!p.group.visible) return;
-                if(Math.abs(player.position.x - p.x) < (p.w/2 + 0.6)) {
-                    const top = p.y + p.h/2;
-                    if(player.position.y - 1.1 <= top && player.position.y > p.y && player.userData.vy <= 0) {
-                        player.position.y = top + 1.1;
-                        player.userData.vy = 0;
-                        player.userData.onGround = true;
-                    }
-                }
-            });
-            if(keys['Space'] && player.userData.onGround) { player.userData.vy = JUMP_FORCE; sfx.jump(); }
-
-            // Camera follow
-            camera.position.x += (player.position.x - camera.position.x) * 0.1;
-            camera.position.y += (Math.max(isInside ? 4 : 5, player.position.y + 1) - camera.position.y) * 0.05;
-            
-            updateUI();
-            
-            // Enemies
-            if (!isInside) {
-                enemies.forEach(en => {
-                    en.position.x += 0.04 * en.userData.dir;
-                    if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
-                    if(player.position.distanceTo(en.position) < 1.2) {
-                        if(stats.potions > 0) { stats.potions--; player.position.y += 2; sfx.damage(); showMessage("Used Potion!"); } 
-                        else triggerRespawn();
-                    }
-                    if(en.userData.helper) { en.userData.helper.update(); en.userData.helper.visible = wireframeMode; }
-                });
-            }
-
-            // Projectiles
-            projectiles.forEach((p, i) => {
-                p.position.x += p.userData.vx;
-                p.userData.helper.update(); p.userData.helper.visible = wireframeMode;
-                let hit = false;
-                enemies.forEach((en, ei) => {
-                    if (p.position.distanceTo(en.position) < 1) {
-                        worldGroup.remove(en); if(en.userData.helper) worldGroup.remove(en.userData.helper);
-                        enemies.splice(ei, 1);
-                        scene.remove(p); scene.remove(p.userData.helper);
-                        projectiles.splice(i, 1);
-                        stats.gold += 5; sfx.collect(); hit = true;
-                    }
-                });
-                if (!hit && Math.abs(p.position.x - player.position.x) > 15) { scene.remove(p); scene.remove(p.userData.helper); projectiles.splice(i, 1); }
-            });
-
-            // Helpers
-            npcs.forEach(n => { if(n.sprite.userData.helper) { n.sprite.userData.helper.update(); n.sprite.userData.helper.visible = wireframeMode; }});
-            if(player.userData.helper) { player.userData.helper.update(); player.userData.helper.visible = wireframeMode; }
-
-            if(player.position.y < -12) triggerRespawn();
-            renderer.render(scene, camera);
+        function shoot() {
+            const b = new THREE.Sprite(MATERIALS.bullet);
+            b.position.copy(player.position); b.scale.set(0.6, 0.6, 1);
+            b.userData = { vx: player.userData.facingRight ? 0.4 : -0.4 };
+            projectiles.push(b); scene.add(b);
+            // Simple removal
+            setTimeout(() => { scene.remove(b); projectiles = projectiles.filter(p => p !== b); }, 2000);
         }
 
-        function createBoxHelper(m, c = 0x00ff00) { const b = new THREE.BoxHelper(m, c); scene.add(b); b.visible = wireframeMode; return b; }
-        function toggleWireframe() { wireframeMode = !wireframeMode; document.getElementById('wireframe-btn').innerText = `Wireframe Mode: ${wireframeMode ? 'ON' : 'OFF'}`; platforms.forEach(p => p.helper.visible = wireframeMode); }
-        function shoot() { if(!gameActive || isPaused || player.userData.isRespawning) return; sfx.shoot(); const b = new THREE.Sprite(MATERIALS.bullet); b.position.copy(player.position); b.scale.set(0.6, 0.6, 1); b.userData = { vx: player.userData.facingRight ? 0.4 : -0.4, helper: createBoxHelper(b, 0xffff00) }; projectiles.push(b); scene.add(b); }
-        function onNewGame() { initAudio(); document.getElementById('menu-screen').style.display = 'none'; const iv = document.getElementById('intro-video'); document.getElementById('intro-overlay').style.display = 'flex'; iv.play().catch(() => startGame()); iv.onended = () => { document.getElementById('intro-overlay').style.display = 'none'; startGame(); }; }
-        function startGame() { gameActive = true; document.getElementById('game-ui').classList.remove('hidden'); switchMusicToGame(); }
-        function openOptions() { initAudio(); document.getElementById('options-overlay').style.display = 'flex'; if (gameActive) isPaused = true; }
-        function closeOptions() { document.getElementById('options-overlay').style.display = 'none'; if (gameActive) isPaused = false; }
-        function toggleOptionsFromKey() { if (!gameActive) return; isPaused ? closeOptions() : openOptions(); }
-        function toggleMusic() { musicEnabled = !musicEnabled; document.getElementById('music-btn').innerText = musicEnabled ? "Music: ON" : "Music: OFF"; const m = gameActive ? document.getElementById('game-music') : document.getElementById('menu-music'); if (musicEnabled) m.play().catch(()=>{}); else m.pause(); }
-        function toggleSfx() { sfxEnabled = !sfxEnabled; document.getElementById('sfx-btn').innerText = sfxEnabled ? "Sounds: ON" : "Sounds: OFF"; }
-        function updateUI() { 
-            const px = player.position.x;
-            let zone = "SpriteVille";
-            if (px < -BIOME_RANGE) zone = "Dark Forest";
-            else if (px > BIOME_RANGE) zone = "Golden Forest";
-            if (isInside) zone = "Sprite Lounge";
-
-            document.getElementById('gold-val').innerText = stats.gold; 
-            document.getElementById('pot-val').innerText = stats.potions; 
-            document.getElementById('zone-display').innerText = zone; 
+        function updateUI() {
+            document.getElementById('gold-val').innerText = stats.gold;
+            document.getElementById('pot-val').innerText = stats.potions;
         }
-        function showMessage(msg) { const b = document.createElement('div'); b.className = "fixed bottom-40 left-1/2 -translate-x-1/2 bg-yellow-400 p-3 rounded-xl z-[1000] text-black shadow-lg text-center min-w-[200px]"; b.innerText = msg; document.body.appendChild(b); setTimeout(() => b.remove(), 3000); }
-        function buyItem(id, p) { if(stats.gold >= p) { stats.gold -= p; sfx.collect(); if(id === 'potion') stats.potions++; if(id === 'boots') { stats.speedMult = 1.5; showMessage("Speed Increased!"); } updateUI(); } else showMessage("Not enough gold!"); }
+
+        function showMessage(m) { const d = document.createElement('div'); d.className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-white p-4 rounded-xl text-black z-[1000]"; d.innerText=m; document.body.appendChild(d); setTimeout(()=>d.remove(), 2000); }
+        function buyItem(id, p) { if(stats.gold >= p) { stats.gold -= p; if(id==='potion') stats.potions++; if(id==='boots') stats.speedMult=1.5; } else showMessage("Not enough gold!"); }
+        function onNewGame() { document.getElementById('menu-screen').style.display = 'none'; startGame(); }
+        function startGame() { gameActive = true; document.getElementById('game-ui').classList.remove('hidden'); }
+        function openOptions() { document.getElementById('options-overlay').style.display = 'flex'; isPaused = true; }
+        function closeOptions() { document.getElementById('options-overlay').style.display = 'none'; isPaused = false; }
         function closeShop() { document.getElementById('shop-ui').style.display = 'none'; }
-        function onResize() { const aspect = window.innerWidth / window.innerHeight; camera.left = -VIEW_SIZE * aspect; camera.right = VIEW_SIZE * aspect; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+        function onResize() { 
+            const aspect = window.innerWidth / window.innerHeight; 
+            camera.left = -VIEW_SIZE * aspect; camera.right = VIEW_SIZE * aspect; 
+            camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); 
+        }
+
         window.onload = init;
     </script>
 </body>
