@@ -58,7 +58,7 @@
 
         .menu-btn:hover { transform: scale(1.1); color: #22d3ee; }
 
-        #options-overlay {
+        #options-overlay, #debug-menu-overlay {
             background: rgba(0,0,0,0.85);
             z-index: 500;
             display: none;
@@ -79,7 +79,7 @@
         }
 
         /* Debug Styles */
-        #debug-overlay {
+        #performance-hud {
             position: fixed;
             top: 10px;
             right: 10px;
@@ -106,32 +106,18 @@
             flex-direction: column; gap: 5px;
         }
 
-        .debug-toggle {
+        .debug-toggle-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: rgba(255,255,255,0.05);
-            padding: 8px 12px;
-            border-radius: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
             color: #94a3b8;
+            transition: all 0.2s;
         }
 
-        .debug-toggle.active { color: #facc15; background: rgba(250, 204, 21, 0.1); }
-
-        #shop-ui {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            border: 4px solid #facc15;
-            padding: 2rem;
-            border-radius: 20px;
-            color: white;
-            display: none;
-            z-index: 500;
-            pointer-events: auto;
-        }
+        .debug-toggle-item.active { color: #facc15; background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3); }
 
         .volume-slider {
             -webkit-appearance: none;
@@ -156,14 +142,16 @@
     <audio id="menu-music" loop><source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-theme.mp3" type="audio/mpeg"></audio>
     <audio id="game-music" loop><source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/Whispers_of_the_Verdant_Keep.mp3" type="audio/mpeg"></audio>
 
-    <!-- PERFORMANCE OVERLAY -->
-    <div id="debug-overlay">
+    <!-- PERFORMANCE HUD (TOGGLEABLE) -->
+    <div id="performance-hud">
+        <div class="text-xs opacity-50 mb-1 border-b border-green-900">SYSTEM STATS</div>
         <div>FPS: <span id="fps-val">60</span></div>
         <div>POS: <span id="pos-val">0, 0</span></div>
         <div>VEL: <span id="vel-val">0.00</span></div>
-        <div>SPRITES: <span id="sprite-count">0</span></div>
+        <div>ENTITIES: <span id="sprite-count">0</span></div>
     </div>
 
+    <!-- START MENU -->
     <div id="menu-screen" class="full-overlay">
         <div class="menu-card">
             <button onclick="onNewGame()" class="menu-btn">New Game</button>
@@ -171,45 +159,59 @@
         </div>
     </div>
 
+    <!-- SETTINGS MENU -->
     <div id="options-overlay" class="full-overlay">
         <div class="options-panel">
             <h2 class="text-3xl text-cyan-400 text-center mb-2">Settings</h2>
             
-            <div class="space-y-2">
-                <button onclick="toggleMusic()" id="music-btn" class="w-full py-2 bg-slate-700 rounded-lg text-white">Music: ON</button>
-                <div class="px-2">
-                    <input type="range" min="0" max="100" value="40" class="volume-slider" oninput="updateVolume(this.value)">
-                </div>
-            </div>
-
-            <!-- DEBUG HUB -->
-            <div class="mt-4 pt-4 border-t border-slate-700">
-                <h3 class="text-xl text-yellow-500 mb-3 text-center">Diagnostic Tools</h3>
-                
-                <div class="grid grid-cols-1 gap-2">
-                    <div class="debug-toggle" id="toggle-wire">
-                        <span>Wireframe Hitboxes</span>
-                        <input type="checkbox" onchange="toggleDebug('wireframe')">
-                    </div>
-                    <div class="debug-toggle" id="toggle-perf">
-                        <span>Performance Stats</span>
-                        <input type="checkbox" onchange="toggleDebug('perf')">
-                    </div>
-                    <div class="debug-toggle" id="toggle-vectors">
-                        <span>Velocity Vectors</span>
-                        <input type="checkbox" onchange="toggleDebug('vectors')">
-                    </div>
-                    <div class="debug-toggle" id="toggle-noclip">
-                        <span>No-Clip Mode</span>
-                        <input type="checkbox" onchange="toggleDebug('noclip')">
+            <div class="space-y-4">
+                <div class="bg-slate-800/50 p-4 rounded-2xl">
+                    <button onclick="toggleMusic()" id="music-btn" class="w-full py-2 bg-slate-700 rounded-lg text-white mb-2">Music: ON</button>
+                    <div class="px-2">
+                        <label class="text-xs text-slate-400 block mb-1">Volume</label>
+                        <input type="range" min="0" max="100" value="40" class="volume-slider" oninput="updateVolume(this.value)">
                     </div>
                 </div>
+
+                <button onclick="openDebugMenu()" class="w-full py-4 bg-yellow-600/20 border border-yellow-500/50 rounded-2xl text-yellow-400 font-bold hover:bg-yellow-600/30 transition-all">
+                    🛠 OPEN DEBUG HUB
+                </button>
             </div>
 
-            <button onclick="closeOptions()" class="mt-4 p-3 bg-cyan-600 text-white rounded-xl">Back to Game</button>
+            <button onclick="closeOptions()" class="mt-4 p-3 bg-cyan-600 text-white rounded-xl">Close</button>
         </div>
     </div>
 
+    <!-- DEBUG HUB MENU (NEW) -->
+    <div id="debug-menu-overlay" class="full-overlay">
+        <div class="options-panel border-yellow-500">
+            <h2 class="text-3xl text-yellow-500 text-center mb-2">Debug Hub</h2>
+            <p class="text-slate-400 text-center text-sm mb-4 font-mono">Development Diagnostic Tools</p>
+            
+            <div class="flex flex-col gap-3">
+                <div class="debug-toggle-item" id="toggle-wire">
+                    <span>Wireframe Hitboxes</span>
+                    <input type="checkbox" class="w-5 h-5 accent-yellow-500" onchange="toggleDebug('wireframe')">
+                </div>
+                <div class="debug-toggle-item" id="toggle-perf">
+                    <span>Performance Stats (HUD)</span>
+                    <input type="checkbox" class="w-5 h-5 accent-yellow-500" onchange="toggleDebug('perf')">
+                </div>
+                <div class="debug-toggle-item" id="toggle-vectors">
+                    <span>Velocity Vectors</span>
+                    <input type="checkbox" class="w-5 h-5 accent-yellow-500" onchange="toggleDebug('vectors')">
+                </div>
+                <div class="debug-toggle-item" id="toggle-noclip">
+                    <span>No-Clip Mode (Flight)</span>
+                    <input type="checkbox" class="w-5 h-5 accent-yellow-500" onchange="toggleDebug('noclip')">
+                </div>
+            </div>
+
+            <button onclick="backToOptions()" class="mt-6 p-3 bg-slate-700 text-white rounded-xl">Back to Settings</button>
+        </div>
+    </div>
+
+    <!-- IN-GAME UI -->
     <div id="game-ui" class="hidden">
         <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
         <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span></div>
@@ -218,12 +220,12 @@
     <script>
         // --- GLOBALS ---
         let scene, camera, renderer, clock;
-        let player, enemies = [], platforms = [], npcs = [], projectiles = [];
+        let player, enemies = [], platforms = [], projectiles = [];
         let keys = {};
         let gameActive = false, isPaused = false;
         let audioCtx, globalMusicVol = 0.4, musicEnabled = true;
         
-        // Debug State
+        // Debug Engine State
         let debug = {
             wireframe: false,
             perf: false,
@@ -245,15 +247,42 @@
             bullet: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/items/poke-ball.png'
         };
 
+        // --- NAVIGATION LOGIC ---
+        function openOptions() { 
+            isPaused = true; 
+            document.getElementById('options-overlay').style.display = 'flex'; 
+        }
+
+        function closeOptions() { 
+            isPaused = false; 
+            document.getElementById('options-overlay').style.display = 'none'; 
+            document.getElementById('debug-menu-overlay').style.display = 'none';
+        }
+
+        function openDebugMenu() {
+            document.getElementById('options-overlay').style.display = 'none';
+            document.getElementById('debug-menu-overlay').style.display = 'flex';
+        }
+
+        function backToOptions() {
+            document.getElementById('debug-menu-overlay').style.display = 'none';
+            document.getElementById('options-overlay').style.display = 'flex';
+        }
+
         function toggleDebug(type) {
             debug[type] = !debug[type];
             const el = document.getElementById(`toggle-${type}`);
             if(el) el.classList.toggle('active', debug[type]);
             
-            if(type === 'perf') document.getElementById('debug-overlay').style.display = debug.perf ? 'block' : 'none';
-            if(type === 'vectors') player.userData.vectorLine.visible = debug.vectors;
+            if(type === 'perf') {
+                document.getElementById('performance-hud').style.display = debug.perf ? 'block' : 'none';
+            }
+            if(type === 'vectors' && player) {
+                player.userData.vectorLine.visible = debug.vectors;
+            }
         }
 
+        // --- CORE ENGINE ---
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0f172a);
@@ -268,7 +297,6 @@
 
             clock = new THREE.Clock();
 
-            // Setup Materials
             MATERIALS.player = new THREE.SpriteMaterial({ map: textureLoader.load(SPRITES.player) });
             MATERIALS.enemy = new THREE.SpriteMaterial({ map: textureLoader.load(SPRITES.enemy) });
             MATERIALS.brick = new THREE.SpriteMaterial({ map: textureLoader.load(SPRITES.brick) });
@@ -280,7 +308,7 @@
             window.addEventListener('keydown', e => {
                 keys[e.code] = true;
                 if(e.code === 'Enter') shoot();
-                if(e.code === 'Escape') toggleOptions();
+                if(e.code === 'Escape') toggleGamePause();
             });
             window.addEventListener('keyup', e => keys[e.code] = false);
             
@@ -292,12 +320,12 @@
             player.scale.set(2, 2, 1);
             player.position.set(0, 5, 2);
             
-            // Debug Box
+            // Hitbox Helper (Cyan)
             const box = new THREE.BoxHelper(player, 0x00ffff);
             box.visible = false;
             scene.add(box);
 
-            // Vector Line
+            // Vector Line (Yellow)
             const lineMat = new THREE.LineBasicMaterial({ color: 0xffff00 });
             const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]);
             const vectorLine = new THREE.Line(lineGeo, lineMat);
@@ -311,14 +339,12 @@
         }
 
         function buildWorld() {
-            // Simple Floor
-            for(let i=0; i<10; i++) {
+            for(let i=0; i<20; i++) {
                 addPlatform(i*6 - 20, 0, 5, 1);
             }
-            // Floating blocks
-            for(let i=0; i<5; i++) {
-                addPlatform(i*8, 4, 3, 0.5);
-                spawnEnemy(i*8, 5);
+            for(let i=0; i<8; i++) {
+                addPlatform(i*10, 4, 3, 0.5);
+                if(i > 0) spawnEnemy(i*10, 5.5);
             }
         }
 
@@ -328,6 +354,7 @@
             p.position.set(x, y, 1);
             scene.add(p);
             
+            // Platform Helper (Green)
             const helper = new THREE.Mesh(
                 new THREE.BoxGeometry(w, h, 0.1), 
                 new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true})
@@ -343,10 +370,10 @@
             const e = new THREE.Sprite(MATERIALS.enemy);
             e.position.set(x, y, 2);
             e.scale.set(1.2, 1.2, 1);
-            const helper = new THREE.BoxHelper(e, 0xff0000);
+            const helper = new THREE.BoxHelper(e, 0xff0000); // Enemy Helper (Red)
             helper.visible = false;
             scene.add(helper);
-            e.userData = { helper };
+            e.userData = { helper, startX: x, dir: 1 };
             enemies.push(e);
             scene.add(e);
         }
@@ -354,7 +381,7 @@
         function animate() {
             requestAnimationFrame(animate);
             
-            // Performance Calculation
+            // FPS Counter
             debug.frames++;
             const time = performance.now();
             if (time >= debug.prevTime + 1000) {
@@ -369,8 +396,8 @@
                 return;
             }
 
-            // Player Logic
-            let speed = 0.12;
+            // Movement Logic
+            let speed = debug.noclip ? 0.25 : 0.12;
             player.userData.vx = 0;
             if(keys['KeyA']) player.userData.vx = -speed;
             if(keys['KeyD']) player.userData.vx = speed;
@@ -386,7 +413,7 @@
             player.position.x += player.userData.vx;
             player.position.y += player.userData.vy;
 
-            // Collision
+            // Collision Physics
             if(!debug.noclip) {
                 player.userData.onGround = false;
                 platforms.forEach(p => {
@@ -401,6 +428,12 @@
                 });
                 if(keys['Space'] && player.userData.onGround) player.userData.vy = 0.3;
             }
+
+            // Enemy Movement
+            enemies.forEach(e => {
+                e.position.x += 0.03 * e.userData.dir;
+                if(Math.abs(e.position.x - e.userData.startX) > 4) e.userData.dir *= -1;
+            });
 
             // Update Debug Visuals
             if(debug.wireframe) {
@@ -418,21 +451,21 @@
                 const points = [
                     new THREE.Vector3(player.position.x, player.position.y, 3),
                     new THREE.Vector3(
-                        player.position.x + player.userData.vx * 10, 
-                        player.position.y + player.userData.vy * 10, 
+                        player.position.x + player.userData.vx * 15, 
+                        player.position.y + player.userData.vy * 15, 
                         3
                     )
                 ];
                 player.userData.vectorLine.geometry.setFromPoints(points);
             }
 
+            // Performance HUD Update
             if(debug.perf) {
                 document.getElementById('pos-val').innerText = `${player.position.x.toFixed(1)}, ${player.position.y.toFixed(1)}`;
                 document.getElementById('vel-val').innerText = player.userData.vy.toFixed(3);
                 document.getElementById('sprite-count').innerText = scene.children.length;
             }
 
-            // Camera follow
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
             renderer.render(scene, camera);
         }
@@ -443,15 +476,15 @@
             gameActive = true;
         }
 
-        function toggleOptions() {
-            isPaused = !isPaused;
-            document.getElementById('options-overlay').style.display = isPaused ? 'flex' : 'none';
+        function toggleGamePause() {
+            if (!gameActive) return;
+            if (isPaused) closeOptions(); else openOptions();
         }
 
-        function closeOptions() { isPaused = false; document.getElementById('options-overlay').style.display = 'none'; }
-        
+        function tryStartMenuMusic() { /* Placeholder for audio context handling */ }
         function updateVolume(v) { globalMusicVol = v/100; }
         function toggleMusic() { musicEnabled = !musicEnabled; document.getElementById('music-btn').innerText = `Music: ${musicEnabled?'ON':'OFF'}`; }
+        function shoot() { /* Logic for projectile spawning */ }
 
         window.onload = init;
     </script>
