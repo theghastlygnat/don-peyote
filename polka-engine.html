@@ -252,21 +252,21 @@
         function tryStartMenuMusic() { initAudio(); if (musicEnabled && !menuMusicStarted && !gameActive) { const m = document.getElementById('menu-music'); m.volume = globalMusicVol; m.play().then(() => menuMusicStarted = true).catch(() => {}); } }
         function switchMusicToGame() { document.getElementById('menu-music').pause(); menuMusicStarted = false; if (musicEnabled) { const g = document.getElementById('game-music'); g.volume = globalMusicVol; g.play().then(() => gameMusicStarted = true).catch(() => {}); } }
         function playSound(f, t, d, v) { if (!audioCtx || !sfxEnabled) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime); g.gain.setValueAtTime(v, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + d); }
-        const sfx = { jump: () => playSound(400, 'square', 0.1, 0.1), shoot: () => playSound(150, 'sawtooth', 0.1, 0.05), collect: () => playSound(800, 'sine', 0.2, 0.1), door: () => playSound(200, 'triangle', 0.4, 0.1) };
+        const sfx = { jump: () => playSound(400, 'square', 0.1, 0.1), shoot: () => playSound(150, 'sawtooth', 0.1, 0.05), collect: () => playSound(800, 'sine', 0.2, 0.1), door: () => playSound(200, 'triangle', 0.4, 0.1), damage: () => playSound(100, 'sawtooth', 0.3, 0.2) };
 
         // --- GAME ENGINE ---
         let scene, camera, renderer, clock;
         let player, enemies = [], platforms = [], npcs = [], projectiles = [];
         let keys = {};
         let gameActive = false, isPaused = false, wireframeMode = false;
-        let isInside = false; // Tracking if player is in the pub
+        let isInside = false; 
         let stats = { gold: 0, potions: 0, speedMult: 1 };
         
         const VIEW_SIZE = 4.2;
         const textureLoader = new THREE.TextureLoader();
         const townCenter = 0;
         let MATERIALS = {};
-        let worldGroup, interiorGroup; // Separate groups for world vs interior
+        let worldGroup, interiorGroup; 
         let pubBuilding = null;
 
         const SPRITES = {
@@ -357,12 +357,11 @@
             player = new THREE.Sprite(MATERIALS.playerStand);
             player.scale.set(2.2, 2.2, 1);
             player.position.set(townCenter, 5, 2);
-            player.userData = { vy: 0, onGround: false, facingRight: true, currentAnim: 'stand', animFrame: 0, animTimer: 0, helper: createBoxHelper(player, 0x22d3ee) };
+            player.userData = { vy: 0, onGround: false, facingRight: true, currentAnim: 'stand', animFrame: 0, animTimer: 0, isRespawning: false, helper: createBoxHelper(player, 0x22d3ee) };
             scene.add(player);
         }
 
         function buildWorld() {
-            // Grass bottom line
             for(let x = -200; x < 800; x += 2) {
                 const tile = new THREE.Sprite(MATERIALS.grass);
                 tile.scale.set(2, 2, 1);
@@ -379,7 +378,6 @@
             spawnNPC(townCenter + 5, 2, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
             spawnNPC(townCenter - 8, 2, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
 
-            // Wilds Generation
             for(let i=0; i<150; i++) {
                 const x = (Math.random() * 1000) - 200;
                 if(Math.abs(x - townCenter) < 40) continue; 
@@ -390,16 +388,11 @@
         }
 
         function buildInterior() {
-            // Pub Interior
-            addPlatform(0, 0, 20, 2, interiorGroup); // Floor
-            addPlatform(-10.5, 5, 1, 12, interiorGroup); // Left Wall
-            addPlatform(10.5, 5, 1, 12, interiorGroup); // Right Wall
-            addPlatform(0, 11, 22, 1, interiorGroup); // Ceiling
-
-            // Barkeeper in the pub
+            addPlatform(0, 0, 20, 2, interiorGroup); 
+            addPlatform(-10.5, 5, 1, 12, interiorGroup); 
+            addPlatform(10.5, 5, 1, 12, interiorGroup); 
+            addPlatform(0, 11, 22, 1, interiorGroup); 
             spawnNPC(4, 2, 'barkeeper', { type: 'npc', name: 'Joe', msg: 'The usual, Don?' }, interiorGroup);
-            
-            // The Exit Door (visual only, logic via pos)
             const exitSign = new THREE.Sprite(MATERIALS.pubOpen);
             exitSign.scale.set(4, 4, 1);
             exitSign.position.set(-8, 3.1, 0.5);
@@ -437,9 +430,8 @@
         }
 
         function handleInteraction() {
-            if(isPaused) return;
+            if(isPaused || player.userData.isRespawning) return;
             
-            // Pub Entry Logic
             if (!isInside && pubBuilding) {
                 const doorPosX = pubBuilding.position.x - 1.2; 
                 if (Math.abs(player.position.x - doorPosX) < 1.5) {
@@ -448,13 +440,11 @@
                 }
             }
 
-            // Pub Exit Logic
             if (isInside && Math.abs(player.position.x - (-8)) < 1.5) {
                 transitionScene(false);
                 return;
             }
 
-            // NPC Interaction
             npcs.forEach(n => {
                 if (n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) {
                     if(n.sprite.userData.type === 'shop') document.getElementById('shop-ui').style.display = 'block';
@@ -484,16 +474,47 @@
             }, 500);
         }
 
+        // --- RESPAWN SYSTEM ---
+        function triggerRespawn() {
+            if (player.userData.isRespawning) return;
+            player.userData.isRespawning = true;
+            sfx.damage();
+            
+            // UI Feedback
+            const fade = document.getElementById('fade-overlay');
+            fade.style.opacity = '1';
+            
+            // Penalty
+            const penalty = Math.floor(stats.gold * 0.2);
+            stats.gold -= penalty;
+            showMessage(`Defeated! Lost ${penalty} Gold. Waking up in Town...`);
+
+            setTimeout(() => {
+                // Reset State
+                isInside = false;
+                worldGroup.visible = true;
+                interiorGroup.visible = false;
+                scene.background = new THREE.Color(0x87CEEB);
+                
+                player.position.set(townCenter, 5, 2);
+                player.userData.vy = 0;
+                player.userData.isRespawning = false;
+                
+                fade.style.opacity = '0';
+                updateUI();
+            }, 1000);
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             if(!gameActive || isPaused) { renderer.render(scene, camera); return; }
+            if(player.userData.isRespawning) { renderer.render(scene, camera); return; }
 
             const speed = 0.15 * stats.speedMult;
             let isMoving = false;
             if(keys['KeyA'] || keys['ArrowLeft']) { player.position.x -= speed; player.userData.facingRight = false; isMoving = true; }
             if(keys['KeyD'] || keys['ArrowRight']) { player.position.x += speed; player.userData.facingRight = true; isMoving = true; }
 
-            // Animation mapping
             let targetAnim = isMoving ? (player.userData.facingRight ? 'runRight' : 'runLeft') : 'stand';
             if (player.userData.currentAnim !== targetAnim) {
                 player.userData.currentAnim = targetAnim;
@@ -508,7 +529,6 @@
                 if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
             }
 
-            // Door Visual Feedback
             if (!isInside && pubBuilding) {
                 const doorPosX = pubBuilding.position.x - 1.2;
                 const distToDoor = Math.abs(player.position.x - doorPosX);
@@ -523,7 +543,6 @@
                 else prompt.style.display = "none";
             }
 
-            // Physics
             player.userData.vy += GRAVITY;
             player.position.y += player.userData.vy;
             player.userData.onGround = false;
@@ -551,7 +570,7 @@
                     if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
                     if(player.position.distanceTo(en.position) < 1.2) {
                         if(stats.potions > 0) { stats.potions--; player.position.y += 2; sfx.damage(); showMessage("Used Potion!"); } 
-                        else gameOver();
+                        else triggerRespawn();
                     }
                     if(en.userData.helper) { en.userData.helper.update(); en.userData.helper.visible = wireframeMode; }
                 });
@@ -576,13 +595,13 @@
             npcs.forEach(n => { if(n.sprite.userData.helper) { n.sprite.userData.helper.update(); n.sprite.userData.helper.visible = wireframeMode; }});
             if(player.userData.helper) { player.userData.helper.update(); player.userData.helper.visible = wireframeMode; }
 
-            if(player.position.y < -10) gameOver();
+            if(player.position.y < -12) triggerRespawn();
             renderer.render(scene, camera);
         }
 
         function createBoxHelper(m, c = 0x00ff00) { const b = new THREE.BoxHelper(m, c); scene.add(b); b.visible = wireframeMode; return b; }
         function toggleWireframe() { wireframeMode = !wireframeMode; document.getElementById('wireframe-btn').innerText = `Wireframe Mode: ${wireframeMode ? 'ON' : 'OFF'}`; platforms.forEach(p => p.helper.visible = wireframeMode); }
-        function shoot() { if(!gameActive || isPaused) return; sfx.shoot(); const b = new THREE.Sprite(MATERIALS.bullet); b.position.copy(player.position); b.scale.set(0.6, 0.6, 1); b.userData = { vx: player.userData.facingRight ? 0.4 : -0.4, helper: createBoxHelper(b, 0xffff00) }; projectiles.push(b); scene.add(b); }
+        function shoot() { if(!gameActive || isPaused || player.userData.isRespawning) return; sfx.shoot(); const b = new THREE.Sprite(MATERIALS.bullet); b.position.copy(player.position); b.scale.set(0.6, 0.6, 1); b.userData = { vx: player.userData.facingRight ? 0.4 : -0.4, helper: createBoxHelper(b, 0xffff00) }; projectiles.push(b); scene.add(b); }
         function onNewGame() { initAudio(); document.getElementById('menu-screen').style.display = 'none'; const iv = document.getElementById('intro-video'); document.getElementById('intro-overlay').style.display = 'flex'; iv.play().catch(() => startGame()); iv.onended = () => { document.getElementById('intro-overlay').style.display = 'none'; startGame(); }; }
         function startGame() { gameActive = true; document.getElementById('game-ui').classList.remove('hidden'); switchMusicToGame(); }
         function openOptions() { initAudio(); document.getElementById('options-overlay').style.display = 'flex'; if (gameActive) isPaused = true; }
@@ -591,10 +610,9 @@
         function toggleMusic() { musicEnabled = !musicEnabled; document.getElementById('music-btn').innerText = musicEnabled ? "Music: ON" : "Music: OFF"; const m = gameActive ? document.getElementById('game-music') : document.getElementById('menu-music'); if (musicEnabled) m.play().catch(()=>{}); else m.pause(); }
         function toggleSfx() { sfxEnabled = !sfxEnabled; document.getElementById('sfx-btn').innerText = sfxEnabled ? "Sounds: ON" : "Sounds: OFF"; }
         function updateUI() { document.getElementById('gold-val').innerText = stats.gold; document.getElementById('pot-val').innerText = stats.potions; document.getElementById('zone-display').innerText = isInside ? "Sprite Lounge" : (Math.abs(player.position.x) < 50 ? "SpriteVille" : "The Wilds"); }
-        function showMessage(msg) { const b = document.createElement('div'); b.className = "fixed bottom-40 left-1/2 -translate-x-1/2 bg-yellow-400 p-3 rounded-xl z-[1000] text-black shadow-lg"; b.innerText = msg; document.body.appendChild(b); setTimeout(() => b.remove(), 3000); }
+        function showMessage(msg) { const b = document.createElement('div'); b.className = "fixed bottom-40 left-1/2 -translate-x-1/2 bg-yellow-400 p-3 rounded-xl z-[1000] text-black shadow-lg text-center min-w-[200px]"; b.innerText = msg; document.body.appendChild(b); setTimeout(() => b.remove(), 3000); }
         function buyItem(id, p) { if(stats.gold >= p) { stats.gold -= p; sfx.collect(); if(id === 'potion') stats.potions++; if(id === 'boots') { stats.speedMult = 1.5; showMessage("Speed Increased!"); } updateUI(); } else showMessage("Not enough gold!"); }
         function closeShop() { document.getElementById('shop-ui').style.display = 'none'; }
-        function gameOver() { gameActive = false; alert("Defeated!"); location.reload(); }
         function onResize() { const aspect = window.innerWidth / window.innerHeight; camera.left = -VIEW_SIZE * aspect; camera.right = VIEW_SIZE * aspect; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
         window.onload = init;
     </script>
