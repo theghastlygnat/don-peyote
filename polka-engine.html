@@ -3,13 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - Clamped Parallax</title>
+    <title>2D Sprite Open World - Fixed Aspect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Luckiest Guy', cursive; }
-        canvas { display: block; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000; 
+            font-family: 'Luckiest Guy', cursive; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        /* The Viewport Container enforces the aspect ratio */
+        #game-viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas { 
+            display: block; 
+            max-width: 100%;
+            max-height: 100%;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
         
         .full-overlay {
             position: absolute;
@@ -174,56 +202,66 @@
         <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/Whispers_of_the_Verdant_Keep.mp3" type="audio/mpeg">
     </audio>
 
-    <div id="fade-overlay"></div>
+    <!-- Viewport container helps maintain ratio on wide screens -->
+    <div id="game-viewport">
+        <div id="fade-overlay"></div>
 
-    <div id="menu-screen" class="full-overlay">
-        <div class="menu-card">
-            <button onclick="onNewGame()" class="menu-btn">New Game</button>
-            <button onclick="showMessage('Save disabled in Demo')" class="menu-btn">Load Game</button>
-            <button onclick="openOptions()" class="menu-btn">Options</button>
-        </div>
-    </div>
-
-    <div id="options-overlay" class="full-overlay">
-        <div class="options-panel">
-            <h2 class="text-4xl text-cyan-400 text-center mb-2">Settings</h2>
-            <button onclick="toggleMusic()" id="music-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Music: ON</button>
-            <div class="flex flex-col gap-1 px-4">
-                <label class="text-white text-sm flex justify-between">
-                    <span>Music Volume</span>
-                    <span id="vol-label">40%</span>
-                </label>
-                <input type="range" min="0" max="100" value="40" class="volume-slider" id="music-vol" oninput="updateVolume(this.value)">
+        <div id="menu-screen" class="full-overlay">
+            <div class="menu-card">
+                <button onclick="onNewGame()" class="menu-btn">New Game</button>
+                <button onclick="showMessage('Save disabled in Demo')" class="menu-btn">Load Game</button>
+                <button onclick="openOptions()" class="menu-btn">Options</button>
             </div>
-            <button onclick="toggleSfx()" id="sfx-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Sounds: ON</button>
-            <div class="mt-4 pt-4 border-t border-cyan-800/50">
-                <h3 class="text-xl text-yellow-400 text-center mb-3">Debug Menu</h3>
-                <button onclick="toggleWireframe()" id="wireframe-btn" class="w-full py-2 bg-yellow-900/30 border border-yellow-500/50 rounded-lg text-white text-lg">Wireframe Mode: OFF</button>
-            </div>
-            <button onclick="closeOptions()" class="mt-4 p-3 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-colors">Close</button>
         </div>
-    </div>
 
-    <div id="intro-overlay" class="full-overlay">
-        <video id="intro-video" preload="auto">
-            <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen-grok.mp4" type="video/mp4">
-        </video>
-    </div>
+        <div id="options-overlay" class="full-overlay">
+            <div class="options-panel">
+                <h2 class="text-4xl text-cyan-400 text-center mb-2">Settings</h2>
+                <button onclick="toggleMusic()" id="music-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Music: ON</button>
+                <div class="flex flex-col gap-1 px-4">
+                    <label class="text-white text-sm flex justify-between">
+                        <span>Music Volume</span>
+                        <span id="vol-label">40%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="40" class="volume-slider" id="music-vol" oninput="updateVolume(this.value)">
+                </div>
+                <button onclick="toggleSfx()" id="sfx-btn" class="menu-btn bg-cyan-900/50 rounded-lg text-lg py-2">Sounds: ON</button>
+                <div class="mt-4 pt-4 border-t border-cyan-800/50">
+                    <h3 class="text-xl text-yellow-400 text-center mb-3">Debug Menu</h3>
+                    <button onclick="toggleWireframe()" id="wireframe-btn" class="w-full py-2 bg-yellow-900/30 border border-yellow-500/50 rounded-lg text-white text-lg">Wireframe Mode: OFF</button>
+                </div>
+                <button onclick="closeOptions()" class="mt-4 p-3 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-colors">Close</button>
+            </div>
+        </div>
 
-    <div id="game-ui" class="hidden">
-        <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
-        <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Potions: <span id="pot-val">0</span></div>
-        <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter: Shoot | E: Interact</div>
-    </div>
+        <div id="intro-overlay" class="full-overlay">
+            <video id="intro-video" preload="auto">
+                <source src="https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen-grok.mp4" type="video/mp4">
+            </video>
+        </div>
 
-    <div id="shop-ui">
-        <h2 class="text-2xl text-yellow-400 mb-4 text-center">Town Shop</h2>
-        <div class="shop-item"><span>Health Potion</span><button class="buy-btn" onclick="buyItem('potion', 10)">10 Gold</button></div>
-        <div class="shop-item"><span>Speed Boots</span><button class="buy-btn" onclick="buyItem('boots', 50)">50 Gold</button></div>
-        <button class="mt-4 w-full text-red-400" onclick="closeShop()">Close</button>
+        <div id="game-ui" class="hidden">
+            <div id="zone-display" class="text-3xl text-cyan-400">SpriteVille</div>
+            <div id="stats" class="text-xl">Gold: <span id="gold-val">0</span> | Potions: <span id="pot-val">0</span></div>
+            <div class="text-sm opacity-80">WASD: Move | Space: Jump | Enter: Shoot | E: Interact</div>
+        </div>
+
+        <div id="shop-ui">
+            <h2 class="text-2xl text-yellow-400 mb-4 text-center">Town Shop</h2>
+            <div class="shop-item"><span>Health Potion</span><button class="buy-btn" onclick="buyItem('potion', 10)">10 Gold</button></div>
+            <div class="shop-item"><span>Speed Boots</span><button class="buy-btn" onclick="buyItem('boots', 50)">50 Gold</button></div>
+            <button class="mt-4 w-full text-red-400" onclick="closeShop()">Close</button>
+        </div>
     </div>
 
     <script>
+        // --- CONSTANTS ---
+        const TARGET_ASPECT = 16 / 9; // Enforced ratio
+        const VIEW_SIZE = 4.2;
+        const GRAVITY = -0.015, JUMP_FORCE = 0.32;
+        const townCenter = 0;
+        const BIOME_RANGE = 50; 
+
         // --- AUDIO ENGINE ---
         let audioCtx;
         let menuMusicStarted = false, gameMusicStarted = false;
@@ -244,11 +282,7 @@
         let isInside = false; 
         let stats = { gold: 0, potions: 0, speedMult: 1 };
         
-        const VIEW_SIZE = 4.2;
         const textureLoader = new THREE.TextureLoader();
-        const townCenter = 0;
-        const BIOME_RANGE = 50; 
-        
         let worldGroup, interiorGroup; 
         let pubBuilding = null;
         let MATERIALS = {};
@@ -270,8 +304,6 @@
             bgForestLeft: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/forestbg-3-gemini.png',
             bgForestRight: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/forestbg-3-gemini.png'
         };
-
-        const GRAVITY = -0.015, JUMP_FORCE = 0.32;
 
         function createSolidTexture(color) {
             const c = document.createElement('canvas'); c.width = 16; c.height = 16;
@@ -305,12 +337,13 @@
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a1a);
-            const aspect = window.innerWidth / window.innerHeight;
-            camera = new THREE.OrthographicCamera(-VIEW_SIZE * aspect, VIEW_SIZE * aspect, VIEW_SIZE, -VIEW_SIZE, 0.1, 1000);
+            
+            // Fixed aspect camera initialization
+            camera = new THREE.OrthographicCamera(-VIEW_SIZE * TARGET_ASPECT, VIEW_SIZE * TARGET_ASPECT, VIEW_SIZE, -VIEW_SIZE, 0.1, 1000);
             camera.position.set(0, 5, 20);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+            document.getElementById('game-viewport').appendChild(renderer.domElement);
             scene.add(new THREE.AmbientLight(0xffffff, 1.2));
             clock = new THREE.Clock();
 
@@ -350,11 +383,13 @@
             });
             window.addEventListener('keyup', e => keys[e.code] = false);
             window.addEventListener('resize', onResize);
+            
+            onResize(); // Initial call to set sizes
             animate();
         }
 
         function buildBiomeBackgrounds() {
-            const h = 18; // Make background tall enough to cover vertical jumps
+            const h = 8.5; 
             const biomes = [
                 { id: 'town', url: SPRITES.bgTown, z: -5, offsetX: 0 },
                 { id: 'forestLeft', url: SPRITES.bgForestLeft, z: -5.1, offsetX: -120 },
@@ -369,14 +404,11 @@
                     const geom = new THREE.PlaneGeometry(w, h);
                     const mesh = new THREE.Mesh(geom, mat);
                     
-                    mesh.position.set(biome.offsetX, 6, biome.z);
-                    mesh.userData = { 
-                        w: w, 
-                        h: h, 
-                        startX: biome.offsetX, 
-                        id: biome.id 
-                    };
-                    
+                    const bottomY = 5 - VIEW_SIZE;
+                    const centeredY = bottomY + (h / 2);
+
+                    mesh.position.set(biome.offsetX, centeredY, biome.z);
+                    mesh.userData = { w, h, startX: biome.offsetX, id: biome.id };
                     bgLayers[biome.id] = mesh;
                     worldGroup.add(mesh);
                 });
@@ -548,8 +580,8 @@
             if (!isInside) {
                 const px = player.position.x;
                 const camX = camera.position.x;
+                const camY = camera.position.y;
                 
-                // Opacity fades between biomes
                 let townOpacity = 1, leftForestOpacity = 0, rightForestOpacity = 0;
                 if (px < -BIOME_RANGE) {
                     const factor = Math.min(1, Math.abs(px + BIOME_RANGE) / 20);
@@ -559,29 +591,21 @@
                     townOpacity = 1 - factor; rightForestOpacity = factor;
                 }
 
-                const screenAspect = window.innerWidth / window.innerHeight;
-                const screenHalfWidth = VIEW_SIZE * screenAspect;
+                const screenHalfWidth = VIEW_SIZE * TARGET_ASPECT;
 
                 Object.keys(bgLayers).forEach(key => {
                     const mesh = bgLayers[key];
                     const targetOpacity = key === 'town' ? townOpacity : (key === 'forestLeft' ? leftForestOpacity : rightForestOpacity);
                     mesh.material.opacity = THREE.MathUtils.lerp(mesh.material.opacity, targetOpacity, 0.05);
                     
-                    // Simple parallax formula: LayerPos = CameraPos * ScrollRatio
-                    // We want to scroll slower than the player (e.g., 0.9 ratio)
-                    // But we must clamp so edges of image never enter screen
-                    const scrollRatio = 0.92;
+                    const scrollRatio = 0.98;
                     let desiredX = mesh.userData.startX + (camX * scrollRatio);
                     
-                    // Clamp logic:
-                    // Left edge of mesh: desiredX - (mesh.userData.w / 2)
-                    // Right edge of mesh: desiredX + (mesh.userData.w / 2)
-                    // We want LeftEdge <= CamX - screenHalfWidth AND RightEdge >= CamX + screenHalfWidth
                     const minAllowedX = camX + screenHalfWidth - (mesh.userData.w / 2);
                     const maxAllowedX = camX - screenHalfWidth + (mesh.userData.w / 2);
                     
                     mesh.position.x = Math.max(minAllowedX, Math.min(maxAllowedX, desiredX));
-                    mesh.position.y = camera.position.y * 0.5 + 3; // Slight vertical parallax
+                    mesh.position.y = (camY - VIEW_SIZE) + (mesh.userData.h / 2);
                 });
             }
 
@@ -675,7 +699,32 @@
         function showMessage(msg) { const b = document.createElement('div'); b.className = "fixed bottom-40 left-1/2 -translate-x-1/2 bg-yellow-400 p-3 rounded-xl z-[1000] text-black shadow-lg text-center min-w-[200px]"; b.innerText = msg; document.body.appendChild(b); setTimeout(() => b.remove(), 3000); }
         function buyItem(id, p) { if(stats.gold >= p) { stats.gold -= p; sfx.collect(); if(id === 'potion') stats.potions++; if(id === 'boots') { stats.speedMult = 1.5; showMessage("Speed Increased!"); } updateUI(); } else showMessage("Not enough gold!"); }
         function closeShop() { document.getElementById('shop-ui').style.display = 'none'; }
-        function onResize() { const aspect = window.innerWidth / window.innerHeight; camera.left = -VIEW_SIZE * aspect; camera.right = VIEW_SIZE * aspect; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+
+        function onResize() {
+            const container = document.getElementById('game-viewport');
+            const windowW = window.innerWidth;
+            const windowH = window.innerHeight;
+            const windowAspect = windowW / windowH;
+
+            let canvasW, canvasH;
+
+            if (windowAspect > TARGET_ASPECT) {
+                // Window is wider than target ratio - black bars on sides
+                canvasH = windowH;
+                canvasW = windowH * TARGET_ASPECT;
+            } else {
+                // Window is taller than target ratio - black bars top/bottom
+                canvasW = windowW;
+                canvasH = windowW / TARGET_ASPECT;
+            }
+
+            renderer.setSize(canvasW, canvasH);
+            
+            // The Orthographic camera keeps its coordinate space constant
+            // so 16:9 logic inside the game never changes.
+            camera.updateProjectionMatrix();
+        }
+
         window.onload = init;
     </script>
 </body>
