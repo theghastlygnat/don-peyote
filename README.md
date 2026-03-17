@@ -3,9 +3,9 @@ a game i am building using generative ai
 
 ![Don Peyote](https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-start-screen.png)
 
-[Live Game](https://gemini.google.com/share/94465f27b384)
+[Live Game](https://gemini.google.com/share/78d210b1fac5)
 
-[Conversation](https://gemini.google.com/share/a3f6212c4913)
+[Conversation](https://gemini.google.com/share/6634045e35d9)
 
 [Design Document](https://docs.google.com/document/d/18NprFMqe9pgHnF8SVS0_Qj5dxadrME16i7pf5G5oqKA/edit?usp=sharing)
 
