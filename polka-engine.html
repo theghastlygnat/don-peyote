@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - JSON Map Loading</title>
+    <title>2D Sprite Open World - Wandering NPCs</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -208,7 +208,6 @@
         <div id="menu-screen" class="full-overlay">
             <div class="menu-card">
                 <button onclick="onNewGame()" class="menu-btn">New Game</button>
-                <!-- Restored Load Game button -->
                 <button onclick="showMessage('Save system coming soon!')" class="menu-btn">Load Game</button>
                 <button onclick="openOptions()" class="menu-btn">Options</button>
             </div>
@@ -234,7 +233,6 @@
                 <div class="mt-4 pt-4 border-t border-cyan-800/50 flex flex-col gap-2">
                     <h3 class="text-xl text-yellow-400 text-center mb-1">Advanced</h3>
                     
-                    <!-- Custom Map Import moved here -->
                     <input type="file" id="map-upload" accept=".json" style="display: none;" onchange="handleMapUpload(event)">
                     <button onclick="document.getElementById('map-upload').click()" class="w-full py-2 bg-purple-900/30 border border-purple-500/50 rounded-lg text-white text-lg hover:bg-purple-800/50 transition-colors">
                         Import Custom Map (.json)
@@ -275,7 +273,6 @@
         const JUMP_FORCE = 0.32;
         const BIOME_RANGE = 50; 
         
-        // --- LEVEL DATA (JSON STRING) ---
         const DEFAULT_LEVEL_JSON = `
         {
             "world": {
@@ -291,8 +288,8 @@
                     { "id": "pub", "type": "pub", "x": -25, "y": 2.15, "z": 0.5, "w": 5.06, "h": 4.21 }
                 ],
                 "npcs": [
-                    { "type": "shopkeeper", "x": 5, "y": 0.8, "config": { "type": "shop", "name": "Merchant" } },
-                    { "type": "npc", "x": -8, "y": 0.8, "config": { "type": "npc", "name": "Mayor", "msg": "Welcome to SpriteVille!" } }
+                    { "type": "shopkeeper", "x": 5, "y": 0.8, "config": { "type": "shop", "name": "Merchant", "wanderRange": 3 } },
+                    { "type": "npc", "x": -8, "y": 0.8, "config": { "type": "npc", "name": "Mayor", "msg": "Welcome to SpriteVille!", "wanderRange": 5 } }
                 ],
                 "enemies": [
                     { "x": -15, "y": 4.1 },
@@ -312,7 +309,7 @@
                     { "x": 0, "y": 11, "w": 22, "h": 1 }
                 ],
                 "npcs": [
-                    { "type": "barkeeper", "x": 4, "y": 2, "config": { "type": "npc", "name": "Joe", "msg": "The usual, Don?" } }
+                    { "type": "barkeeper", "x": 4, "y": 2, "config": { "type": "npc", "name": "Joe", "msg": "The usual, Don?", "wanderRange": 2 } }
                 ],
                 "props": [
                     { "type": "pubOpen", "x": -8, "y": 3.1, "z": 0.5, "w": 4, "h": 4 }
@@ -461,33 +458,23 @@
             animate();
         }
 
-        // --- CUSTOM MAP UPLOAD ---
         function handleMapUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const parsedData = JSON.parse(e.target.result);
                     currentLevelData = parsedData;
-                    
                     clearLevel();
                     loadLevelData('world', worldGroup, currentLevelData);
                     loadLevelData('interior', interiorGroup, currentLevelData);
-                    
                     showMessage("Map Loaded!");
-                    
                     if(player) {
-                        isInside = false;
-                        worldGroup.visible = true;
-                        interiorGroup.visible = false;
-                        player.position.set(0, 4, 2); 
-                        player.userData.vy = 0;
+                        isInside = false; worldGroup.visible = true; interiorGroup.visible = false;
+                        player.position.set(0, 4, 2); player.userData.vy = 0;
                     }
-                } catch (err) {
-                    showMessage("Invalid Map JSON!");
-                }
+                } catch (err) { showMessage("Invalid Map JSON!"); }
             };
             reader.readAsText(file);
             event.target.value = ''; 
@@ -505,19 +492,15 @@
             pubBuilding = null;
         }
 
-        // --- MAP PARSER ---
         function loadLevelData(levelId, group, mapData) {
             const data = mapData[levelId];
             if (!data) return;
-
             if (data.grassTiles) {
                 const conf = data.grassTiles;
                 for(let x = conf.startX; x < conf.endX; x += conf.step) {
-                    let frame = 3;
-                    if (Math.random() < 0.15) frame = Math.floor(Math.random() * 3);
+                    let frame = 3; if (Math.random() < 0.15) frame = Math.floor(Math.random() * 3);
                     const tile = new THREE.Sprite(MATERIALS.grassFrames[frame]);
-                    tile.position.set(x, conf.y, conf.z);
-                    tile.scale.set(2, 2, 1);
+                    tile.position.set(x, conf.y, conf.z); tile.scale.set(2, 2, 1);
                     group.add(tile);
                 }
             }
@@ -526,8 +509,7 @@
                 data.buildings.forEach(b => {
                     const mesh = new THREE.Sprite(MATERIALS[b.type]);
                     mesh.position.set(b.x, b.y, b.z); mesh.scale.set(b.w, b.h, 1);
-                    group.add(mesh);
-                    if (b.id === 'pub') pubBuilding = mesh;
+                    group.add(mesh); if (b.id === 'pub') pubBuilding = mesh;
                 });
             }
             if (data.props) {
@@ -555,11 +537,7 @@
 
         function buildBiomeBackgrounds() {
             const h = 8.5; 
-            const biomes = [
-                { id: 'town', url: SPRITES.bgTown, z: -5, offsetX: 0 },
-                { id: 'forestLeft', url: SPRITES.bgForestLeft, z: -5.1, offsetX: -120 },
-                { id: 'forestRight', url: SPRITES.bgForestRight, z: -5.1, offsetX: 120 }
-            ];
+            const biomes = [{ id: 'town', url: SPRITES.bgTown, z: -5, offsetX: 0 }, { id: 'forestLeft', url: SPRITES.bgForestLeft, z: -5.1, offsetX: -120 }, { id: 'forestRight', url: SPRITES.bgForestRight, z: -5.1, offsetX: 120 }];
             biomes.forEach(biome => {
                 textureLoader.load(biome.url, (tex) => {
                     const aspect = tex.image.width / tex.image.height;
@@ -571,8 +549,7 @@
                     const centeredY = bottomY + (h * 0.7);
                     mesh.position.set(biome.offsetX, centeredY+5, biome.z);
                     mesh.userData = { w, h, startX: biome.offsetX, id: biome.id };
-                    bgLayers[biome.id] = mesh;
-                    backgroundGroup.add(mesh);
+                    bgLayers[biome.id] = mesh; backgroundGroup.add(mesh);
                 });
             });
         }
@@ -592,32 +569,33 @@
             const geom = new THREE.BoxGeometry(m.userData.width, m.userData.height, 0.2);
             const mat = new THREE.MeshBasicMaterial({ color: c, wireframe: true });
             const mesh = new THREE.Mesh(geom, mat);
-            scene.add(mesh); mesh.visible = wireframeMode;
-            return mesh;
+            scene.add(mesh); mesh.visible = wireframeMode; return mesh;
         }
 
         function addPlatform(x, y, w, h, group) {
             const mat = new THREE.SpriteMaterial({ map: createSolidTexture('#8b4513'), transparent: true });
-            const checkBase = setInterval(() => {
-                if (MATERIALS.brickBase) {
-                    const tiledTex = MATERIALS.brickBase.clone();
-                    tiledTex.repeat.set(w, h); tiledTex.needsUpdate = true;
-                    mat.map = tiledTex; mat.needsUpdate = true;
-                    clearInterval(checkBase);
-                }
-            }, 100);
+            const checkBase = setInterval(() => { if (MATERIALS.brickBase) { const tiledTex = MATERIALS.brickBase.clone(); tiledTex.repeat.set(w, h); tiledTex.needsUpdate = true; mat.map = tiledTex; mat.needsUpdate = true; clearInterval(checkBase); } }, 100);
             const p = new THREE.Sprite(mat); p.scale.set(w, h, 1); p.position.set(x, y, 1);
             if (w < 100) group.add(p);
             const helper = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
-            helper.position.set(x, y, 1.1); helper.visible = wireframeMode;
-            group.add(helper);
+            helper.position.set(x, y, 1.1); helper.visible = wireframeMode; group.add(helper);
             platforms.push({ x, y, w, h, helper, group });
         }
 
         function spawnNPC(x, y, matKey, data, group) {
             const npc = new THREE.Sprite(MATERIALS[matKey]);
             npc.position.set(x, y, 1.5); npc.scale.set(1.6, 1.6, 1);
-            npc.userData = { ...data, helper: createBoxHelper(npc, 0xffffff) };
+            // Added Wander logic: state, timer, range
+            npc.userData = { 
+                ...data, 
+                startX: x, 
+                state: 'idle', 
+                timer: Math.random() * 2000, 
+                moveSpeed: 0.02 + Math.random() * 0.02,
+                wanderRange: data.wanderRange || 5,
+                dir: 1,
+                helper: createBoxHelper(npc, 0xffffff) 
+            };
             npcs.push({ sprite: npc, group }); group.add(npc);
         }
 
@@ -630,9 +608,7 @@
 
         function handleInteraction() {
             if(isPaused || player.userData.isRespawning) return;
-            if (!isInside && pubBuilding && pubBuilding.parent === worldGroup) {
-                if (Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) { transitionScene(true); return; }
-            }
+            if (!isInside && pubBuilding && pubBuilding.parent === worldGroup) { if (Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) { transitionScene(true); return; } }
             if (isInside && Math.abs(player.position.x - (-8)) < 1.5) { transitionScene(false); return; }
             npcs.forEach(n => {
                 if (n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) {
@@ -643,12 +619,10 @@
         }
 
         function transitionScene(entering) {
-            const fade = document.getElementById('fade-overlay');
-            fade.style.opacity = '1'; sfx.door();
+            const fade = document.getElementById('fade-overlay'); fade.style.opacity = '1'; sfx.door();
             setTimeout(() => {
                 isInside = entering; worldGroup.visible = !entering; interiorGroup.visible = entering;
-                if (entering) player.position.set(-6, 2, 2);
-                else player.position.set(pubBuilding ? pubBuilding.position.x - 1.2 : 0, 1.2, 2);
+                if (entering) player.position.set(-6, 2, 2); else player.position.set(pubBuilding ? pubBuilding.position.x - 1.2 : 0, 1.2, 2);
                 fade.style.opacity = '0'; updateUI();
             }, 500);
         }
@@ -675,10 +649,7 @@
             if(keys['KeyD'] || keys['ArrowRight']) { moveX += speed; player.userData.facingRight = true; isMoving = true; }
             if (moveX !== 0) {
                 const oldX = player.position.x; player.position.x += moveX;
-                platforms.forEach(p => {
-                    if(!p.group.visible) return;
-                    if (Math.abs(player.position.x - p.x) < (p.w/2 + player.userData.width/2) && Math.abs(player.position.y - p.y) < (p.h/2 + player.userData.height/2)) player.position.x = oldX;
-                });
+                platforms.forEach(p => { if(!p.group.visible) return; if (Math.abs(player.position.x - p.x) < (p.w/2 + player.userData.width/2) && Math.abs(player.position.y - p.y) < (p.h/2 + player.userData.height/2)) player.position.x = oldX; });
             }
             player.userData.vy += GRAVITY;
             const oldY = player.position.y; player.position.y += player.userData.vy;
@@ -692,54 +663,60 @@
                     else if (player.userData.vy > 0) { player.position.y = pB - player.userData.height/2; player.userData.vy = 0; }
                 }
             });
-            if(keys['Space'] && player.userData.onGround) { player.userData.vy = JUMP_FORCE; sfx.jump(); }
             let targetAnim = isMoving ? (player.userData.facingRight ? 'runRight' : 'runLeft') : 'stand';
-            if (player.userData.currentAnim !== targetAnim) {
-                player.userData.currentAnim = targetAnim; player.userData.animFrame = 0; player.userData.animTimer = 0;
-                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')];
-            }
+            if (player.userData.currentAnim !== targetAnim) { player.userData.currentAnim = targetAnim; player.userData.animFrame = 0; player.userData.animTimer = 0; player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')]; }
             if (targetAnim === 'stand') { if (player.material.map) player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0; } 
             else { if (++player.userData.animTimer > 5) { player.userData.animFrame = (player.userData.animFrame + 1) % 11; player.userData.animTimer = 0; } if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11; }
             if (!isInside) {
                 const px = player.position.x, camX = camera.position.x, camY = camera.position.y;
-                let tO = 1, lFO = 0, rFO = 0;
-                if (px < -BIOME_RANGE) { const f = Math.min(1, Math.abs(px + BIOME_RANGE) / 20); tO = 1 - f; lFO = f; } 
-                else if (px > BIOME_RANGE) { const f = Math.min(1, (px - BIOME_RANGE) / 20); tO = 1 - f; rFO = f; }
+                let tO = 1, lFO = 0, rFO = 0; if (px < -BIOME_RANGE) { const f = Math.min(1, Math.abs(px + BIOME_RANGE) / 20); tO = 1 - f; lFO = f; } else if (px > BIOME_RANGE) { const f = Math.min(1, (px - BIOME_RANGE) / 20); tO = 1 - f; rFO = f; }
                 const sHW = VIEW_SIZE * TARGET_ASPECT;
-                Object.keys(bgLayers).forEach(k => {
-                    const m = bgLayers[k]; const tOp = k === 'town' ? tO : (k === 'forestLeft' ? lFO : rFO);
-                    m.material.opacity = THREE.MathUtils.lerp(m.material.opacity, tOp, 0.05);
-                    const dX = m.userData.startX + (camX * 0.98);
-                    m.position.x = Math.max(camX + sHW - m.userData.w/2, Math.min(camX - sHW + m.userData.w/2, dX)); m.position.y = (camY - VIEW_SIZE) + (m.userData.h / 2);
-                });
+                Object.keys(bgLayers).forEach(k => { const m = bgLayers[k]; const tOp = k === 'town' ? tO : (k === 'forestLeft' ? lFO : rFO); m.material.opacity = THREE.MathUtils.lerp(m.material.opacity, tOp, 0.05); const dX = m.userData.startX + (camX * 0.98); m.position.x = Math.max(camX + sHW - m.userData.w/2, Math.min(camX - sHW + m.userData.w/2, dX)); m.position.y = (camY - VIEW_SIZE) + (m.userData.h / 2); });
             }
-            camera.position.x += (player.position.x - camera.position.x) * 0.1;
-            camera.position.y += (Math.max(4, player.position.y + 1) - camera.position.y) * 0.05;
+            camera.position.x += (player.position.x - camera.position.x) * 0.1; camera.position.y += (Math.max(4, player.position.y + 1) - camera.position.y) * 0.05;
             let foundInt = false;
-            if (!isInside && pubBuilding && pubBuilding.parent === worldGroup) { if (Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) { pubBuilding.material = MATERIALS.pubOpen; foundInt = true; } else pubBuilding.material = MATERIALS.pub; } 
-            else if (isInside && Math.abs(player.position.x - (-8)) < 1.5) foundInt = true;
+            if (!isInside && pubBuilding && pubBuilding.parent === worldGroup) { if (Math.abs(player.position.x - (pubBuilding.position.x - 1.2)) < 1.5) { pubBuilding.material = MATERIALS.pubOpen; foundInt = true; } else pubBuilding.material = MATERIALS.pub; } else if (isInside && Math.abs(player.position.x - (-8)) < 1.5) foundInt = true;
             if (!foundInt) npcs.forEach(n => { if (n.group.visible && player.position.distanceTo(n.sprite.position) < 2.5) foundInt = true; });
-            interactSprite.visible = foundInt;
-            if (foundInt) interactSprite.position.set(player.position.x, player.position.y + 1.6 + Math.sin(Date.now() * 0.01) * 0.1, 3);
-            enemies.forEach(en => {
-                if(!en.parent || !en.parent.visible) return; en.position.x += 0.04 * en.userData.dir;
-                if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
-                if(player.position.distanceTo(en.position) < 1.0) { if(stats.potions > 0) { stats.potions--; player.position.y += 2; sfx.damage(); showMessage("Used Potion!"); } else triggerRespawn(); }
+            interactSprite.visible = foundInt; if (foundInt) interactSprite.position.set(player.position.x, player.position.y + 1.6 + Math.sin(Date.now() * 0.01) * 0.1, 3);
+            
+            // --- NPC WANDERING UPDATE ---
+            npcs.forEach(n => {
+                const s = n.sprite;
+                if (!n.group.visible) return;
+                
+                s.userData.timer -= 16; // Approx 60fps update
+                if (s.userData.timer <= 0) {
+                    // Switch state
+                    if (s.userData.state === 'idle') {
+                        s.userData.state = 'moving';
+                        s.userData.dir = Math.random() > 0.5 ? 1 : -1;
+                        s.userData.timer = 1000 + Math.random() * 2000; // Walk for 1-3 seconds
+                    } else {
+                        s.userData.state = 'idle';
+                        s.userData.timer = 2000 + Math.random() * 4000; // Stay idle for 2-6 seconds
+                    }
+                }
+
+                if (s.userData.state === 'moving') {
+                    const nextX = s.position.x + s.userData.moveSpeed * s.userData.dir;
+                    // Check range limits
+                    if (Math.abs(nextX - s.userData.startX) > s.userData.wanderRange) {
+                        s.userData.dir *= -1;
+                    } else {
+                        s.position.x = nextX;
+                    }
+                }
+                if (s.userData.helper) s.userData.helper.update();
             });
-            projectiles.forEach((p, i) => {
-                p.position.x += p.userData.vx;
-                enemies.forEach((en, ei) => {
-                    if(!en.parent || !en.parent.visible) return;
-                    if (p.position.distanceTo(en.position) < 1) { en.parent.remove(en); enemies.splice(ei, 1); scene.remove(p); projectiles.splice(i, 1); stats.gold += 5; sfx.collect(); }
-                });
-                if (Math.abs(p.position.x - player.position.x) > 15) { scene.remove(p); projectiles.splice(i, 1); }
-            });
+
+            enemies.forEach(en => { if(!en.parent || !en.parent.visible) return; en.position.x += 0.04 * en.userData.dir; if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1; if(player.position.distanceTo(en.position) < 1.0) { if(stats.potions > 0) { stats.potions--; player.position.y += 2; sfx.damage(); showMessage("Used Potion!"); } else triggerRespawn(); } if (en.userData.helper) en.userData.helper.update(); });
+            projectiles.forEach((p, i) => { p.position.x += p.userData.vx; enemies.forEach((en, ei) => { if(!en.parent || !en.parent.visible) return; if (p.position.distanceTo(en.position) < 1) { en.parent.remove(en); enemies.splice(ei, 1); scene.remove(p); projectiles.splice(i, 1); stats.gold += 5; sfx.collect(); } }); if (Math.abs(p.position.x - player.position.x) > 15) { scene.remove(p); projectiles.splice(i, 1); } });
             if(player.userData.helper) player.userData.helper.position.copy(player.position);
             updateUI(); renderer.render(scene, camera);
         }
 
         function createBoxHelper(m, c = 0x00ff00) { const b = new THREE.BoxHelper(m, c); scene.add(b); b.visible = wireframeMode; return b; }
-        function toggleWireframe() { wireframeMode = !wireframeMode; document.getElementById('wireframe-btn').innerText = `Wireframe Mode: ${wireframeMode ? 'ON' : 'OFF'}`; platforms.forEach(p => { if(p.helper) p.helper.visible = wireframeMode; }); if(player.userData.helper) player.userData.helper.visible = wireframeMode; }
+        function toggleWireframe() { wireframeMode = !wireframeMode; document.getElementById('wireframe-btn').innerText = `Wireframe Mode: ${wireframeMode ? 'ON' : 'OFF'}`; platforms.forEach(p => { if(p.helper) p.helper.visible = wireframeMode; }); if(player.userData.helper) player.userData.helper.visible = wireframeMode; npcs.forEach(n => { if(n.sprite.userData.helper) n.sprite.userData.helper.visible = wireframeMode; }); enemies.forEach(e => { if(e.userData.helper) e.userData.helper.visible = wireframeMode; }); }
         function shoot() { if(!gameActive || isPaused || player.userData.isRespawning) return; sfx.shoot(); const b = new THREE.Sprite(MATERIALS.bullet); b.position.copy(player.position); b.scale.set(0.6, 0.6, 1); b.userData = { vx: player.userData.facingRight ? 0.4 : -0.4 }; projectiles.push(b); scene.add(b); }
         function onNewGame() { initAudio(); document.getElementById('menu-screen').style.display = 'none'; const iv = document.getElementById('intro-video'); document.getElementById('intro-overlay').style.display = 'flex'; iv.play().catch(() => startGame()); iv.onended = () => { document.getElementById('intro-overlay').style.display = 'none'; startGame(); }; }
         function startGame() { gameActive = true; document.getElementById('game-ui').classList.remove('hidden'); switchMusicToGame(); }
@@ -748,18 +725,11 @@
         function toggleOptionsFromKey() { if (!gameActive) return; isPaused ? closeOptions() : openOptions(); }
         function toggleMusic() { musicEnabled = !musicEnabled; document.getElementById('music-btn').innerText = musicEnabled ? "Music: ON" : "Music: OFF"; const m = gameActive ? document.getElementById('game-music') : document.getElementById('menu-music'); if (musicEnabled) m.play().catch(()=>{}); else m.pause(); }
         function toggleSfx() { sfxEnabled = !sfxEnabled; document.getElementById('sfx-btn').innerText = sfxEnabled ? "Sounds: ON" : "Sounds: OFF"; }
-        function updateUI() { 
-            const px = player.position.x; let zone = "SpriteVille"; if (px < -BIOME_RANGE) zone = "Dark Forest"; else if (px > BIOME_RANGE) zone = "Golden Forest"; if (isInside) zone = "Sprite Lounge";
-            document.getElementById('gold-val').innerText = stats.gold; document.getElementById('pot-val').innerText = stats.potions; document.getElementById('zone-display').innerText = zone; 
-        }
+        function updateUI() { const px = player.position.x; let zone = "SpriteVille"; if (px < -BIOME_RANGE) zone = "Dark Forest"; else if (px > BIOME_RANGE) zone = "Golden Forest"; if (isInside) zone = "Sprite Lounge"; document.getElementById('gold-val').innerText = stats.gold; document.getElementById('pot-val').innerText = stats.potions; document.getElementById('zone-display').innerText = zone; }
         function showMessage(msg) { const viewport = document.getElementById('game-viewport'); const b = document.createElement('div'); b.className = "absolute bottom-1/4 left-1/2 -translate-x-1/2 bg-yellow-400 p-2 rounded-xl z-[1000] text-black shadow-lg text-center min-w-[150px] text-sm"; b.innerText = msg; viewport.appendChild(b); setTimeout(() => b.remove(), 2500); }
         function buyItem(id, p) { if(stats.gold >= p) { stats.gold -= p; sfx.collect(); if(id === 'potion') stats.potions++; if(id === 'boots') { stats.speedMult = 1.5; showMessage("Speed Increased!"); } updateUI(); } else showMessage("Not enough gold!"); }
         function closeShop() { document.getElementById('shop-ui').style.display = 'none'; }
-        function onResize() {
-            const viewport = document.getElementById('game-viewport'); const windowW = window.innerWidth, windowH = window.innerHeight, windowAspect = windowW / windowH;
-            let finalW, finalH; if (windowAspect > TARGET_ASPECT) { finalH = windowH; finalW = windowH * TARGET_ASPECT; } else { finalW = windowW; finalH = windowW / TARGET_ASPECT; }
-            viewport.style.width = finalW + 'px'; viewport.style.height = finalH + 'px'; renderer.setSize(finalW, finalH); camera.updateProjectionMatrix();
-        }
+        function onResize() { const viewport = document.getElementById('game-viewport'); const windowW = window.innerWidth, windowH = window.innerHeight, windowAspect = windowW / windowH; let finalW, finalH; if (windowAspect > TARGET_ASPECT) { finalH = windowH; finalW = windowH * TARGET_ASPECT; } else { finalW = windowW; finalH = windowW / TARGET_ASPECT; } viewport.style.width = finalW + 'px'; viewport.style.height = finalH + 'px'; renderer.setSize(finalW, finalH); camera.updateProjectionMatrix(); }
         window.onload = init;
     </script>
 </body>
