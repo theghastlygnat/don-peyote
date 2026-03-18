@@ -261,8 +261,7 @@
         const BIOME_RANGE = 50; 
         
         // GROUND LEVEL CONSTANTS
-        const GROUND_Y = 1.0;  // The target height of the physical ground
-        const GRASS_OFFSET = 0; // Visual grass sprite offset relative to GROUND_Y
+        const GROUND_Y = 1.0; // The base visual center line for the ground assets
 
         // --- AUDIO ENGINE ---
         let audioCtx;
@@ -442,8 +441,8 @@
         function createPlayer() {
             player = new THREE.Sprite(MATERIALS.playerStand);
             player.scale.set(2.2, 2.2, 1);
-            // Height offset adjusted: Sprite origin is center, so player rests at GROUND_Y + (scaleH / 2)
-            player.position.set(townCenter, GROUND_Y + 1.1, 2);
+            // Spawn higher up to fall securely onto the new floor level
+            player.position.set(townCenter, GROUND_Y + 3.0, 2);
             
             player.userData = { 
                 vy: 0, 
@@ -482,22 +481,26 @@
                 if (Math.random() < 0.15) frame = Math.floor(Math.random() * 3);
                 const tile = new THREE.Sprite(MATERIALS.grassFrames[frame]);
                 tile.scale.set(2, 2, 1);
-                // Grass center is GROUND_Y (so top is at GROUND_Y + 1)
-                tile.position.set(x, GROUND_Y + GRASS_OFFSET, 0.4);
+                // Grass sprites are 2 units tall, centered at GROUND_Y, top edge is GROUND_Y + 1
+                // z set to 1.2 so it renders completely over the ground block (z=1.0)
+                tile.position.set(x, GROUND_Y, 1.2);
                 worldGroup.add(tile);
             }
 
-            // Physical Ground Bounding Box (Centered Y-pos adjusted to align top with GROUND_Y)
-            // If top of ground should be at GROUND_Y, center = GROUND_Y - (height / 2)
-            addPlatform(300, GROUND_Y - 1.0, 2000, 2, worldGroup);
+            // Physical Ground Bounding Box
+            // Moved Y completely up. Height = 2. 
+            // Setting Center Y to GROUND_Y aligns its top perfectly with the grass top (GROUND_Y + 1).
+            addPlatform(300, GROUND_Y, 2000, 2, worldGroup);
             
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
-            pubBuilding.position.set(townCenter - 25, GROUND_Y + 2.15, 0.5); 
+            // Adjusted pub height mathematically to rest exactly on the new ground top level
+            pubBuilding.position.set(townCenter - 25, GROUND_Y + 3.105, 0.5); 
             pubBuilding.scale.set(5.06, 4.21, 1);
             worldGroup.add(pubBuilding);
 
-            spawnNPC(townCenter + 5, GROUND_Y + 0.8, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
-            spawnNPC(townCenter - 8, GROUND_Y + 0.8, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
+            // NPCs raised to rest on new floor level
+            spawnNPC(townCenter + 5, GROUND_Y + 1.8, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
+            spawnNPC(townCenter - 8, GROUND_Y + 1.8, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
 
             for(let i=0; i<300; i++) {
                 const x = (Math.random() * 1400) - 400;
@@ -539,7 +542,8 @@
 
             const p = new THREE.Sprite(mat);
             p.scale.set(w, h, 1);
-            p.position.set(x, y, 1);
+            // Placed at z=1.0. The grass sprites are now at 1.2 so they visibly overlay the brown ground edge.
+            p.position.set(x, y, 1.0);
             if (w < 100) group.add(p);
             
             const helper = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
@@ -600,7 +604,7 @@
                 worldGroup.visible = !entering;
                 interiorGroup.visible = entering;
                 if (entering) player.position.set(-6, 2, 2);
-                else player.position.set(pubBuilding.position.x - 1.2, GROUND_Y + 1.2, 2);
+                else player.position.set(pubBuilding.position.x - 1.2, GROUND_Y + 2.5, 2);
                 fade.style.opacity = '0';
                 updateUI();
             }, 500);
