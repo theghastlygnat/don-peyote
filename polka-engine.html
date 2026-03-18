@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - Animation Fix</title>
+    <title>2D Sprite Open World - Ground Alignment</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -259,6 +259,12 @@
         const JUMP_FORCE = 0.32;
         const townCenter = 0;
         const BIOME_RANGE = 50; 
+        
+        // GROUND LEVEL CONSTANTS
+        // Raising the ground from 0 to 0.75.
+        // The grass sprite has a height of 2, so centered at 1.75 means it sits exactly on y=0.75.
+        const GROUND_Y = 0.75; 
+        const GRASS_OFFSET = 1.0; // Half of grass sprite scale (2.0 / 2)
 
         // --- AUDIO ENGINE ---
         let audioCtx;
@@ -438,7 +444,8 @@
         function createPlayer() {
             player = new THREE.Sprite(MATERIALS.playerStand);
             player.scale.set(2.2, 2.2, 1);
-            player.position.set(townCenter, 5, 2);
+            // Spawn player at new ground height
+            player.position.set(townCenter, GROUND_Y + 1.1, 2);
             
             player.userData = { 
                 vy: 0, 
@@ -471,29 +478,34 @@
         }
 
         function buildWorld() {
-            // Lowered the grass Y position from 1.25 to 0.5 to align the visual art with the ground bounding box
+            // Reposition grass: Since grass scale is 2, positioning it at GROUND_Y + 1.0 (GRASS_OFFSET) 
+            // makes its bottom edge sit exactly at GROUND_Y (0.75).
             for(let x = -400; x < 1000; x += 2) {
                 let frame = 3;
                 if (Math.random() < 0.15) frame = Math.floor(Math.random() * 3);
                 const tile = new THREE.Sprite(MATERIALS.grassFrames[frame]);
                 tile.scale.set(2, 2, 1);
-                tile.position.set(x, 0.5, 0.4);
+                tile.position.set(x, GROUND_Y + GRASS_OFFSET, 0.4);
                 worldGroup.add(tile);
             }
-            addPlatform(300, 0, 2000, 2, worldGroup);
+
+            // Raising the main floor platform to GROUND_Y (0.75).
+            // h=2 means center is at y= -0.25 to make top = 0.75.
+            addPlatform(300, GROUND_Y - 1.0, 2000, 2, worldGroup);
             
+            // Adjust pub building to sit on new ground
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
-            pubBuilding.position.set(townCenter - 25, 3.4, 0.5); 
+            pubBuilding.position.set(townCenter - 25, GROUND_Y + 2.15, 0.5); 
             pubBuilding.scale.set(5.06, 4.21, 1);
             worldGroup.add(pubBuilding);
 
-            spawnNPC(townCenter + 5, 2, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
-            spawnNPC(townCenter - 8, 2, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
+            spawnNPC(townCenter + 5, GROUND_Y + 0.8, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
+            spawnNPC(townCenter - 8, GROUND_Y + 0.8, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
 
             for(let i=0; i<300; i++) {
                 const x = (Math.random() * 1400) - 400;
                 if(Math.abs(x - townCenter) < 40) continue; 
-                const y = 3 + Math.random() * 7;
+                const y = GROUND_Y + 3 + Math.random() * 7;
                 addPlatform(x, y, 3, 0.8, worldGroup);
                 if(Math.random() > 0.6) spawnEnemy(x, y + 1.1);
             }
@@ -591,7 +603,7 @@
                 worldGroup.visible = !entering;
                 interiorGroup.visible = entering;
                 if (entering) player.position.set(-6, 2, 2);
-                else player.position.set(pubBuilding.position.x - 1.2, 2, 2);
+                else player.position.set(pubBuilding.position.x - 1.2, GROUND_Y + 1.2, 2);
                 fade.style.opacity = '0';
                 updateUI();
             }, 500);
@@ -608,7 +620,7 @@
             showMessage(`Defeated! Lost ${penalty} Gold.`);
             setTimeout(() => {
                 isInside = false; worldGroup.visible = true; interiorGroup.visible = false;
-                player.position.set(townCenter, 5, 2); player.userData.vy = 0; player.userData.isRespawning = false;
+                player.position.set(townCenter, GROUND_Y + 4, 2); player.userData.vy = 0; player.userData.isRespawning = false;
                 fade.style.opacity = '0'; updateUI();
             }, 1000);
         }
@@ -677,7 +689,7 @@
                 player.userData.currentAnim = targetAnim;
                 player.userData.animFrame = 0;
                 player.userData.animTimer = 0;
-                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')];
+                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : (targetAnim === 'runLeft' ? 'playerRunLeft' : 'playerStand'))];
             }
             if (targetAnim === 'stand') {
                 if (player.material.map) player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
@@ -717,7 +729,7 @@
             }
 
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
-            camera.position.y += (Math.max(isInside ? 4 : 5, player.position.y + 1) - camera.position.y) * 0.05;
+            camera.position.y += (Math.max(isInside ? 4 : GROUND_Y + 4, player.position.y + 1) - camera.position.y) * 0.05;
             
             let foundInteraction = false;
             if (!isInside && pubBuilding) {
