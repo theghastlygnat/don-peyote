@@ -355,13 +355,21 @@
                 enemy: createSafeMaterial(SPRITES.enemy, '#ff0000'),
                 npc: createSafeMaterial(SPRITES.npc, '#ffffff'),
                 shopkeeper: createSafeMaterial(SPRITES.shopkeeper, '#ff00ff'),
-                brick: createSafeMaterial(SPRITES.brick, '#8b4513'),
+                brickBase: null, // Initialized below
                 bullet: createSafeMaterial(SPRITES.bullet, '#ffffff'),
                 pub: createSafeMaterial(SPRITES.pub, '#444444'),
                 pubOpen: createSafeMaterial(SPRITES.pubOpen, '#444444'),
                 barkeeper: createSafeMaterial(SPRITES.barkeeper, '#ffaaaa'),
                 exclamation: new THREE.SpriteMaterial({ map: createExclamationTexture(), transparent: true })
             };
+
+            // Brick texture needs specific wrap settings for tiling
+            textureLoader.load(SPRITES.brick, (t) => {
+                t.magFilter = THREE.NearestFilter;
+                t.wrapS = THREE.RepeatWrapping;
+                t.wrapT = THREE.RepeatWrapping;
+                MATERIALS.brickBase = t;
+            });
 
             // Pre-create the 4 grass frame materials to avoid cloning issues
             MATERIALS.grassFrames = [];
@@ -494,10 +502,29 @@
         }
 
         function addPlatform(x, y, w, h, group) {
-            const p = new THREE.Sprite(MATERIALS.brick);
+            // Create a custom material per platform to handle tiling correctly
+            const mat = new THREE.SpriteMaterial({ 
+                map: createSolidTexture('#8b4513'), 
+                transparent: true 
+            });
+
+            // Update the material once the base brick texture is available
+            const checkBase = setInterval(() => {
+                if (MATERIALS.brickBase) {
+                    const tiledTex = MATERIALS.brickBase.clone();
+                    tiledTex.repeat.set(w, h); // This makes bricks square regardless of scale
+                    tiledTex.needsUpdate = true;
+                    mat.map = tiledTex;
+                    mat.needsUpdate = true;
+                    clearInterval(checkBase);
+                }
+            }, 100);
+
+            const p = new THREE.Sprite(mat);
             p.scale.set(w, h, 1);
             p.position.set(x, y, 1);
             if (w < 100) group.add(p);
+            
             const helper = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true}));
             helper.position.set(x, y, 1.1);
             helper.visible = wireframeMode;
