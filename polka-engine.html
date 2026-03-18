@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - Ground Alignment</title>
+    <title>2D Sprite Open World - Perfect Collision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -261,8 +261,8 @@
         const BIOME_RANGE = 50; 
         
         // GROUND LEVEL CONSTANTS
-        const GROUND_Y = 1; 
-        const GRASS_OFFSET = 0; // Changed to 0 to align with top of grass art
+        const GROUND_Y = 1.0;  // The target height of the physical ground
+        const GRASS_OFFSET = 0; // Visual grass sprite offset relative to GROUND_Y
 
         // --- AUDIO ENGINE ---
         let audioCtx;
@@ -442,6 +442,7 @@
         function createPlayer() {
             player = new THREE.Sprite(MATERIALS.playerStand);
             player.scale.set(2.2, 2.2, 1);
+            // Height offset adjusted: Sprite origin is center, so player rests at GROUND_Y + (scaleH / 2)
             player.position.set(townCenter, GROUND_Y + 1.1, 2);
             
             player.userData = { 
@@ -475,15 +476,19 @@
         }
 
         function buildWorld() {
+            // Visual Grass
             for(let x = -400; x < 1000; x += 2) {
                 let frame = 3;
                 if (Math.random() < 0.15) frame = Math.floor(Math.random() * 3);
                 const tile = new THREE.Sprite(MATERIALS.grassFrames[frame]);
                 tile.scale.set(2, 2, 1);
+                // Grass center is GROUND_Y (so top is at GROUND_Y + 1)
                 tile.position.set(x, GROUND_Y + GRASS_OFFSET, 0.4);
                 worldGroup.add(tile);
             }
 
+            // Physical Ground Bounding Box (Centered Y-pos adjusted to align top with GROUND_Y)
+            // If top of ground should be at GROUND_Y, center = GROUND_Y - (height / 2)
             addPlatform(300, GROUND_Y - 1.0, 2000, 2, worldGroup);
             
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
