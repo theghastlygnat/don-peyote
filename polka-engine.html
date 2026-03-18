@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - Tight Hitboxes</title>
+    <title>2D Sprite Open World - Animation Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -437,13 +437,9 @@
 
         function createPlayer() {
             player = new THREE.Sprite(MATERIALS.playerStand);
-            // Visual size remains 2.2 for sprite fidelity
             player.scale.set(2.2, 2.2, 1);
             player.position.set(townCenter, 5, 2);
             
-            // HITBOX ADJUSTMENT: 
-            // We set width and height smaller than the visual sprite (2.2) 
-            // to account for transparent padding and make gameplay feel "tighter".
             player.userData = { 
                 vy: 0, 
                 onGround: false, 
@@ -452,8 +448,8 @@
                 animFrame: 0, 
                 animTimer: 0, 
                 isRespawning: false, 
-                width: 0.7,   // Snug width for character core
-                height: 1.1,  // Shorter height to focus on feet/body
+                width: 0.7,
+                height: 1.1,
                 helper: null 
             };
             player.userData.helper = createBoxHelperForHitbox(player, 0x22d3ee);
@@ -465,7 +461,6 @@
             scene.add(interactSprite);
         }
 
-        // Helper specifically for the player hitbox visualization
         function createBoxHelperForHitbox(m, c) {
             const geom = new THREE.BoxGeometry(m.userData.width, m.userData.height, 0.2);
             const mat = new THREE.MeshBasicMaterial({ color: c, wireframe: true });
@@ -484,7 +479,6 @@
                 tile.position.set(x, 1.25, 0.4);
                 worldGroup.add(tile);
             }
-            // Floor platform
             addPlatform(300, 0, 2000, 2, worldGroup);
             
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
@@ -495,7 +489,6 @@
             spawnNPC(townCenter + 5, 2, 'shopkeeper', { type: 'shop', name: 'Merchant' }, worldGroup);
             spawnNPC(townCenter - 8, 2, 'npc', { type: 'npc', name: 'Mayor', msg: 'Welcome to SpriteVille!' }, worldGroup);
 
-            // Random platforms
             for(let i=0; i<300; i++) {
                 const x = (Math.random() * 1400) - 400;
                 if(Math.abs(x - townCenter) < 40) continue; 
@@ -627,7 +620,6 @@
             const speed = 0.15 * stats.speedMult;
             let isMoving = false;
             
-            // X-AXIS MOVEMENT & COLLISION
             let moveX = 0;
             if(keys['KeyA'] || keys['ArrowLeft']) { moveX -= speed; player.userData.facingRight = false; isMoving = true; }
             if(keys['KeyD'] || keys['ArrowRight']) { moveX += speed; player.userData.facingRight = true; isMoving = true; }
@@ -636,7 +628,6 @@
                 const oldX = player.position.x;
                 player.position.x += moveX;
                 
-                // Horizontal Collision Check
                 platforms.forEach(p => {
                     if(!p.group.visible) return;
                     const pLeft = p.x - p.w/2, pRight = p.x + p.w/2;
@@ -652,7 +643,6 @@
                 });
             }
 
-            // Y-AXIS MOVEMENT & COLLISION
             player.userData.vy += GRAVITY;
             const oldY = player.position.y;
             player.position.y += player.userData.vy;
@@ -669,12 +659,10 @@
 
                 if (rLeft < pRight && rRight > pLeft && rBottom < pTop && rTop > pBottom) {
                     if (player.userData.vy < 0) {
-                        // Falling onto top
                         player.position.y = pTop + player.userData.height/2;
                         player.userData.vy = 0;
                         player.userData.onGround = true;
                     } else if (player.userData.vy > 0) {
-                        // Hitting bottom
                         player.position.y = pBottom - player.userData.height/2;
                         player.userData.vy = 0;
                     }
@@ -683,13 +671,12 @@
 
             if(keys['Space'] && player.userData.onGround) { player.userData.vy = JUMP_FORCE; sfx.jump(); }
 
-            // ANIMATION STATE
             let targetAnim = isMoving ? (player.userData.facingRight ? 'runRight' : 'runLeft') : 'stand';
             if (player.userData.currentAnim !== targetAnim) {
                 player.userData.currentAnim = targetAnim;
                 player.userData.animFrame = 0;
                 player.userData.animTimer = 0;
-                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'runLeft')];
+                player.material = MATERIALS[targetAnim === 'stand' ? 'playerStand' : (targetAnim === 'runRight' ? 'playerRunRight' : 'playerRunLeft')];
             }
             if (targetAnim === 'stand') {
                 if (player.material.map) player.material.map.offset.x = player.userData.facingRight ? 0.5 : 0;
@@ -698,7 +685,6 @@
                 if (player.material.map) player.material.map.offset.x = player.userData.animFrame / 11;
             }
 
-            // CAMERA & BIOMES
             if (!isInside) {
                 const px = player.position.x;
                 const camX = camera.position.x;
@@ -732,7 +718,6 @@
             camera.position.x += (player.position.x - camera.position.x) * 0.1;
             camera.position.y += (Math.max(isInside ? 4 : 5, player.position.y + 1) - camera.position.y) * 0.05;
             
-            // INTERACTIONS
             let foundInteraction = false;
             if (!isInside && pubBuilding) {
                 const doorPosX = pubBuilding.position.x - 1.2;
@@ -750,12 +735,11 @@
 
             updateUI();
             
-            // ENEMIES & PROJECTILES
             if (!isInside) {
                 enemies.forEach(en => {
                     en.position.x += 0.04 * en.userData.dir;
                     if(Math.abs(en.position.x - en.userData.startX) > en.userData.range) en.userData.dir *= -1;
-                    if(player.position.distanceTo(en.position) < 1.0) { // Slightly smaller damage radius
+                    if(player.position.distanceTo(en.position) < 1.0) { 
                         if(stats.potions > 0) { stats.potions--; player.position.y += 2; sfx.damage(); showMessage("Used Potion!"); } 
                         else triggerRespawn();
                     }
@@ -779,7 +763,6 @@
 
             npcs.forEach(n => { if(n.sprite.userData.helper) { n.sprite.userData.helper.update(); n.sprite.userData.helper.visible = wireframeMode; }});
             
-            // Update the custom player hitbox helper
             if(player.userData.helper) { 
                 player.userData.helper.position.copy(player.position); 
                 player.userData.helper.visible = wireframeMode; 
