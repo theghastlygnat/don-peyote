@@ -261,7 +261,7 @@
         const BIOME_RANGE = 50; 
         
         // GROUND LEVEL CONSTANTS
-        const GROUND_Y = 1.0;  // The target height of the physical ground
+        const GROUND_Y = 0;  // The target height of the physical ground
         const GRASS_OFFSET = 0; // Visual grass sprite offset relative to GROUND_Y
 
         // --- AUDIO ENGINE ---
@@ -442,7 +442,7 @@
         function createPlayer() {
             player = new THREE.Sprite(MATERIALS.playerStand);
             player.scale.set(2.2, 2.2, 1);
-            player.position.set(townCenter, GROUND_Y + 1.1, 2);
+            player.position.set(townCenter, GROUND_Y, 2);
             
             player.userData = { 
                 vy: 0, 
@@ -479,12 +479,12 @@
                 let frame = 3;
                 if (Math.random() < 0.15) frame = Math.floor(Math.random() * 3);
                 const tile = new THREE.Sprite(MATERIALS.grassFrames[frame]);
-                tile.scale.set(2, 2, 1);
                 tile.position.set(x, GROUND_Y + GRASS_OFFSET, 0.4);
+                tile.scale.set(2, 2, 1);
                 worldGroup.add(tile);
             }
 
-            addPlatform(300, GROUND_Y - 1.0, 2000, 2, worldGroup);
+            addPlatform(300, -.62 , 2000, 2, worldGroup);
             
             pubBuilding = new THREE.Sprite(MATERIALS.pub);
             pubBuilding.position.set(townCenter - 25, GROUND_Y + 2.15, 0.5); 
