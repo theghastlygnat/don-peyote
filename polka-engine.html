@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Sprite Open World - New Pub Interior</title>
+    <title>2D Sprite Open World - Updated Mayor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -289,7 +289,7 @@
                 ],
                 "npcs": [
                     { "type": "shopkeeper", "x": 5, "y": 0.8, "config": { "type": "shop", "name": "Merchant", "wanderRange": 3 } },
-                    { "type": "npc", "x": -8, "y": 0.8, "config": { "type": "npc", "name": "Mayor", "msg": "Welcome to SpriteVille!", "wanderRange": 5 } }
+                    { "type": "mayor", "x": -8, "y": 0.8, "config": { "type": "npc", "name": "Mayor", "msg": "Welcome to SpriteVille! I am the Mayor.", "wanderRange": 5 } }
                 ],
                 "enemies": [
                     { "x": -15, "y": 4.1 },
@@ -350,6 +350,7 @@
             playerRunRight: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/don-peyote-run-cycle-right-12fps.png',
             enemy: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/129.png',
             npc: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/151.png',
+            mayor: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/mayor-500x500.png',
             shopkeeper: 'https://raw.githubusercontent.com/pokeapi/sprites/master/sprites/pokemon/122.png',
             grass: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/grass-tilesheet-944x267-gemini.png',
             brick: 'https://raw.githubusercontent.com/theghastlygnat/don-peyote/master/assets/brick185x185-gemini.png',
@@ -405,6 +406,7 @@
                 playerRunRight: createSafeMaterial(SPRITES.playerRunRight, '#ffff00', 11, 1),
                 enemy: createSafeMaterial(SPRITES.enemy, '#ff0000'),
                 npc: createSafeMaterial(SPRITES.npc, '#ffffff'),
+                mayor: createSafeMaterial(SPRITES.mayor, '#ffffff'),
                 shopkeeper: createSafeMaterial(SPRITES.shopkeeper, '#ff00ff'),
                 brickBase: null,
                 bullet: createSafeMaterial(SPRITES.bullet, '#ffffff'),
@@ -596,7 +598,10 @@
 
         function spawnNPC(x, y, matKey, data, group) {
             const npc = new THREE.Sprite(MATERIALS[matKey]);
-            npc.position.set(x, y, 1.5); npc.scale.set(1.6, 1.6, 1);
+            npc.position.set(x, y, 1.5); 
+            // Scale logic: Mayor is high res, adjust accordingly
+            const scale = matKey === 'mayor' ? 2.2 : 1.6;
+            npc.scale.set(scale, scale, 1);
             npc.userData = { 
                 ...data, 
                 startX: x, 
